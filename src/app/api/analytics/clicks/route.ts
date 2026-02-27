@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
      WHERE l.user_id = ? AND lc.created_at >= ?
      GROUP BY DATE(lc.created_at)
      ORDER BY date ASC`,
-    session.userId, since
+    session.userId,
+    since
   );
 
   // Fill in missing days
@@ -36,7 +37,8 @@ export async function GET(request: NextRequest) {
      FROM link_clicks lc JOIN links l ON lc.link_id = l.id
      WHERE l.user_id = ? AND lc.created_at >= ?
      GROUP BY referrer ORDER BY count DESC LIMIT 10`,
-    session.userId, since
+    session.userId,
+    since
   );
 
   // By device
@@ -45,7 +47,8 @@ export async function GET(request: NextRequest) {
      FROM link_clicks lc JOIN links l ON lc.link_id = l.id
      WHERE l.user_id = ? AND lc.created_at >= ?
      GROUP BY device ORDER BY count DESC`,
-    session.userId, since
+    session.userId,
+    since
   );
 
   // By country
@@ -54,7 +57,8 @@ export async function GET(request: NextRequest) {
      FROM link_clicks lc JOIN links l ON lc.link_id = l.id
      WHERE l.user_id = ? AND lc.created_at >= ?
      GROUP BY country ORDER BY count DESC LIMIT 10`,
-    session.userId, since
+    session.userId,
+    since
   );
 
   // Top links
@@ -63,8 +67,34 @@ export async function GET(request: NextRequest) {
      FROM link_clicks lc JOIN links l ON lc.link_id = l.id
      WHERE l.user_id = ? AND lc.created_at >= ?
      GROUP BY l.id ORDER BY clicks DESC LIMIT 10`,
-    session.userId, since
+    session.userId,
+    since
   );
 
-  return jsonOk({ days: filledDays, byReferrer, byDevice, byCountry, topLinks });
+  // --- Summary stats ---
+  const totalClicks = filledDays.reduce((s, d) => s + d.clicks, 0);
+  const avgClicksPerDay = days > 0 ? Math.round((totalClicks / days) * 10) / 10 : 0;
+  const bestDay = filledDays.reduce(
+    (best, d) => (d.clicks > best.clicks ? d : best),
+    { date: "", clicks: 0 }
+  );
+  // CTR proxy: total clicks in period / number of links with clicks
+  const activeLinks = topLinks.length || 1;
+  const ctr = Math.round((totalClicks / activeLinks) * 10) / 10;
+
+  return jsonOk({
+    days: filledDays,
+    byReferrer,
+    byDevice,
+    byCountry,
+    topLinks,
+    summary: {
+      totalClicks,
+      avgClicksPerDay,
+      bestDay: bestDay.date
+        ? { date: bestDay.date, clicks: bestDay.clicks }
+        : null,
+      ctr,
+    },
+  });
 }

@@ -121,6 +121,14 @@ export const settingsSchema = z.object({
   tip_url: z.string().trim().max(2000).refine((v) => v === "" || isHttpUrl(v), "Must be a valid URL").optional(),
   // Username change
   username: z.string().trim().min(3).max(30).regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens").refine((v) => !RESERVED_USERNAMES.includes(v), "Reserved").optional(),
+  // SEO & Meta
+  seo_title: z.string().trim().max(120).optional(),
+  seo_description: z.string().trim().max(300).optional(),
+  og_image_url: z.string().trim().max(2000).refine((v) => v === "" || (absoluteUrlSchema.safeParse(v).success && isHttpUrl(v)), "Invalid image URL").optional(),
+  hide_from_search: z.boolean().optional(),
+  // Appearance: Animation & Social Position
+  link_animation: z.enum(["none", "fade-in", "slide-up", "bounce", "stagger"]).optional(),
+  social_position: z.enum(["top", "bottom"]).optional(),
 });
 
 export const socialIconSchema = z.object({

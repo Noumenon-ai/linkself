@@ -116,6 +116,10 @@ export default function AppearancePage() {
   const [tipText, setTipText] = useState("");
   const [tipUrl, setTipUrl] = useState("");
 
+  // Animation & Social Position
+  const [linkAnimation, setLinkAnimation] = useState("fade-in");
+  const [socialPosition, setSocialPosition] = useState("top");
+
   // UI state
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -155,6 +159,8 @@ export default function AppearancePage() {
         setTipEnabled(Boolean(data.tip_enabled));
         setTipText(data.tip_text || "");
         setTipUrl(data.tip_url || "");
+        setLinkAnimation(data.link_animation || "fade-in");
+        setSocialPosition(data.social_position || "top");
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -179,6 +185,7 @@ export default function AppearancePage() {
           font_family: fontFamily, font_size: fontSize, text_color: textColor,
           layout: layoutMode, avatar_shape: avatarShape, avatar_border: avatarBorder,
           nsfw, tip_enabled: tipEnabled, tip_text: tipText, tip_url: tipUrl,
+          link_animation: linkAnimation, social_position: socialPosition,
         }),
       });
       setPreviewCss(sanitizeCustomCss(customCss));
@@ -333,6 +340,27 @@ export default function AppearancePage() {
         </div>
       </Section>
 
+      {/* Animation */}
+      <Section title="Link Animation">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Choose how your links animate when visitors load your profile page.</p>
+        <SelectField label="Entrance Animation" value={linkAnimation} onChange={setLinkAnimation} options={[
+          { value: "none", label: "None" },
+          { value: "fade-in", label: "Fade In" },
+          { value: "slide-up", label: "Slide Up" },
+          { value: "bounce", label: "Bounce" },
+          { value: "stagger", label: "Stagger (one by one)" },
+        ]} />
+      </Section>
+
+      {/* Social Icons Position */}
+      <Section title="Social Icons Position">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Choose where your social media icons appear on your profile.</p>
+        <SelectField label="Position" value={socialPosition} onChange={setSocialPosition} options={[
+          { value: "top", label: "Top (above links)" },
+          { value: "bottom", label: "Bottom (below links)" },
+        ]} />
+      </Section>
+
       {/* Tip Jar */}
       <Section title="Tip Jar / Donations">
         <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
@@ -358,7 +386,7 @@ export default function AppearancePage() {
       </Section>
 
       {/* Custom CSS */}
-      <Section title="Custom CSS (Pro)">
+      <Section title="Custom CSS">
         <div className="space-y-1.5">
           <textarea value={customCss} onChange={(e) => setCustomCss(e.target.value)} rows={10} maxLength={5000} spellCheck={false} className="block w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-3 font-mono text-xs leading-5 text-emerald-100 placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30 focus:outline-none" placeholder={".profile-page {\n  border-radius: 24px;\n}\n.link-button {\n  text-transform: uppercase;\n}"} />
           <div className="flex items-center justify-between text-xs text-slate-500">
@@ -404,7 +432,7 @@ export default function AppearancePage() {
               ))}
             </div>
 
-            <p className={`powered-by mt-4 text-xs ${theme.footerClass}`}>Powered by LinkSelf</p>
+            <p className={`powered-by mt-4 text-xs ${theme.footerClass}`}>{displayName || "You"} on LinkSelf</p>
           </div>
         </div>
       </Section>

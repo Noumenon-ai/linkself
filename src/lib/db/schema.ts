@@ -29,6 +29,14 @@ export interface UserRow {
   tip_enabled: number;
   tip_text: string;
   tip_url: string;
+  // SEO & Meta
+  seo_title: string;
+  seo_description: string;
+  og_image_url: string;
+  hide_from_search: number;
+  // Appearance: Animation & Social Position
+  link_animation: string;
+  social_position: string;
   plan: string;
   created_at: string;
   updated_at: string;

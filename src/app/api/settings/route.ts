@@ -14,6 +14,8 @@ const SETTINGS_FIELDS = [
   "font_family", "font_size", "text_color",
   "layout", "avatar_shape", "avatar_border",
   "nsfw", "tip_enabled", "tip_text", "tip_url",
+  "seo_title", "seo_description", "og_image_url", "hide_from_search",
+  "link_animation", "social_position",
   "plan",
 ] as const;
 
@@ -43,6 +45,8 @@ const UPDATABLE_FIELDS = [
   "font_family", "font_size", "text_color",
   "layout", "avatar_shape", "avatar_border",
   "nsfw", "tip_enabled", "tip_text", "tip_url",
+  "seo_title", "seo_description", "og_image_url", "hide_from_search",
+  "link_animation", "social_position",
   "username",
 ] as const;
 
@@ -83,7 +87,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   // Boolean fields that need integer conversion for SQLite
-  const BOOLEAN_FIELDS = new Set(["nsfw", "tip_enabled"]);
+  const BOOLEAN_FIELDS = new Set(["nsfw", "tip_enabled", "hide_from_search"]);
 
   // Handle all other fields
   for (const field of UPDATABLE_FIELDS) {

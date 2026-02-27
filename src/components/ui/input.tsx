@@ -21,8 +21,8 @@ export function Input({ label, error, hint, className, id, ...props }: InputProp
       <input
         id={inputId}
         className={cn(
-          "block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-colors dark:bg-slate-800 dark:border-slate-600 dark:text-white",
-          error && "border-red-500 focus:border-red-500 focus:ring-red-500/20",
+          "block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none transition-all duration-200 dark:bg-slate-800 dark:border-slate-600 dark:text-white",
+          error && "!border-red-500 focus:!border-red-500 focus:!ring-red-500/20",
           className
         )}
         aria-invalid={!!error}

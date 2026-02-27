@@ -31,6 +31,14 @@ const USER_COLUMN_MIGRATIONS: Array<{ name: string; definition: string }> = [
   { name: "tip_enabled", definition: "tip_enabled INTEGER NOT NULL DEFAULT 0" },
   { name: "tip_text", definition: "tip_text TEXT DEFAULT 'Buy me a coffee ☕'" },
   { name: "tip_url", definition: "tip_url TEXT DEFAULT ''" },
+  // SEO & Meta
+  { name: "seo_title", definition: "seo_title TEXT DEFAULT ''" },
+  { name: "seo_description", definition: "seo_description TEXT DEFAULT ''" },
+  { name: "og_image_url", definition: "og_image_url TEXT DEFAULT ''" },
+  { name: "hide_from_search", definition: "hide_from_search INTEGER NOT NULL DEFAULT 0" },
+  // Appearance: Animation & Social Position
+  { name: "link_animation", definition: "link_animation TEXT NOT NULL DEFAULT 'fade-in'" },
+  { name: "social_position", definition: "social_position TEXT NOT NULL DEFAULT 'top'" },
 ];
 
 const LINK_COLUMN_MIGRATIONS: Array<{ name: string; definition: string }> = [
