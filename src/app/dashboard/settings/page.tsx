@@ -64,9 +64,16 @@ export default function SettingsPage() {
   const [seoDescription, setSeoDescription] = useState("");
   const [ogImageUrl, setOgImageUrl] = useState("");
 
+  // Tracking & Analytics
+  const [gaMeasurementId, setGaMeasurementId] = useState("");
+  const [fbPixelId, setFbPixelId] = useState("");
+  const [tiktokPixelId, setTiktokPixelId] = useState("");
+
   // Privacy
   const [nsfw, setNsfw] = useState(false);
   const [hideFromSearch, setHideFromSearch] = useState(false);
+  const [pagePassword, setPagePassword] = useState("");
+  const [passwordEnabled, setPasswordEnabled] = useState(false);
 
   // UI state
   const [saving, setSaving] = useState(false);
@@ -90,6 +97,11 @@ export default function SettingsPage() {
         setOgImageUrl(data.og_image_url || "");
         setNsfw(Boolean(data.nsfw));
         setHideFromSearch(Boolean(data.hide_from_search));
+        setGaMeasurementId(data.ga_measurement_id || "");
+        setFbPixelId(data.fb_pixel_id || "");
+        setTiktokPixelId(data.tiktok_pixel_id || "");
+        setPagePassword(data.page_password || "");
+        setPasswordEnabled(Boolean(data.page_password));
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -117,6 +129,10 @@ export default function SettingsPage() {
           og_image_url: ogImageUrl,
           nsfw,
           hide_from_search: hideFromSearch,
+          ga_measurement_id: gaMeasurementId,
+          fb_pixel_id: fbPixelId,
+          tiktok_pixel_id: tiktokPixelId,
+          page_password: passwordEnabled ? pagePassword : "",
         }),
       });
       setSaved(true);
@@ -236,6 +252,34 @@ export default function SettingsPage() {
         )}
       </Section>
 
+      {/* Tracking & Analytics Section */}
+      <Section title="Tracking & Analytics">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Add tracking pixels to measure traffic on your profile page. Paste your IDs below and they will be automatically injected into your public page.
+        </p>
+        <Input
+          label="Google Analytics Measurement ID"
+          value={gaMeasurementId}
+          onChange={(e) => setGaMeasurementId(e.target.value.trim())}
+          placeholder="G-XXXXXXXXXX"
+          hint="Find this in Google Analytics > Admin > Data Streams. Tracks page views, traffic sources, and visitor behavior."
+        />
+        <Input
+          label="Facebook Pixel ID"
+          value={fbPixelId}
+          onChange={(e) => setFbPixelId(e.target.value.trim())}
+          placeholder="1234567890"
+          hint="Find this in Meta Events Manager > Pixels. Enables retargeting and conversion tracking for Facebook & Instagram ads."
+        />
+        <Input
+          label="TikTok Pixel ID"
+          value={tiktokPixelId}
+          onChange={(e) => setTiktokPixelId(e.target.value.trim())}
+          placeholder="XXXXXXXXX"
+          hint="Find this in TikTok Ads Manager > Events. Tracks conversions from TikTok ad campaigns."
+        />
+      </Section>
+
       {/* Privacy & Security Section */}
       <Section title="Privacy & Security">
         <Toggle
@@ -251,24 +295,28 @@ export default function SettingsPage() {
           checked={hideFromSearch}
           onChange={setHideFromSearch}
         />
-        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900 opacity-60">
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-medium text-slate-900 dark:text-white">Password-Protect Page</p>
-              <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600 dark:bg-slate-700 dark:text-slate-400">
-                Coming Soon
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">Require a password to view your profile page</p>
+        <Toggle
+          label="Password-Protect Page"
+          description="Visitors must enter a password to view your profile page"
+          checked={passwordEnabled}
+          onChange={(v) => {
+            setPasswordEnabled(v);
+            if (!v) setPagePassword("");
+          }}
+          color="amber"
+        />
+        {passwordEnabled && (
+          <div className="ml-4 pl-4 border-l-2 border-amber-300 dark:border-amber-700">
+            <Input
+              label="Page Password"
+              value={pagePassword}
+              onChange={(e) => setPagePassword(e.target.value)}
+              placeholder="Enter a password..."
+              maxLength={100}
+              hint="Visitors must enter this password to view your page. Keep it simple and shareable."
+            />
           </div>
-          <button
-            type="button"
-            disabled
-            className="relative inline-flex h-6 w-11 shrink-0 cursor-not-allowed rounded-full border-2 border-transparent bg-slate-300 dark:bg-slate-600"
-          >
-            <span className="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm translate-x-0" />
-          </button>
-        </div>
+        )}
       </Section>
 
       {/* Danger Zone */}

@@ -50,8 +50,15 @@ export const linkCreateSchema = z.object({
   nsfw: z.boolean().optional().default(false),
   scheduled_start: z.string().optional().or(z.literal("")),
   scheduled_end: z.string().optional().or(z.literal("")),
-  link_type: z.enum(["link", "header", "divider", "embed"]).optional().default("link"),
+  link_type: z.enum(["link", "header", "divider", "embed", "email-collector", "countdown", "contact-form", "faq", "image-gallery", "testimonial", "map"]).optional().default("link"),
   embed_url: z.string().trim().max(2000).optional().default(""),
+  block_config: z.string().max(10000).optional(),
+  // UTM parameters
+  utm_source: z.string().trim().max(200).optional().default(""),
+  utm_medium: z.string().trim().max(200).optional().default(""),
+  utm_campaign: z.string().trim().max(200).optional().default(""),
+  // Pinned
+  is_pinned: z.boolean().optional().default(false),
 });
 
 export const linkUpdateSchema = z.object({
@@ -67,8 +74,15 @@ export const linkUpdateSchema = z.object({
   nsfw: z.boolean().optional(),
   scheduled_start: z.string().optional().or(z.literal("")),
   scheduled_end: z.string().optional().or(z.literal("")),
-  link_type: z.enum(["link", "header", "divider", "embed"]).optional(),
+  link_type: z.enum(["link", "header", "divider", "embed", "email-collector", "countdown", "contact-form", "faq", "image-gallery", "testimonial", "map"]).optional(),
   embed_url: z.string().trim().max(2000).optional(),
+  block_config: z.string().max(10000).optional(),
+  // UTM parameters
+  utm_source: z.string().trim().max(200).optional(),
+  utm_medium: z.string().trim().max(200).optional(),
+  utm_campaign: z.string().trim().max(200).optional(),
+  // Pinned
+  is_pinned: z.boolean().optional(),
 });
 
 export const linkReorderSchema = z.object({
@@ -84,12 +98,15 @@ export const settingsSchema = z.object({
   ).optional().nullable(),
   theme: z.string().max(50).optional(),
   custom_css: z.string().max(5000).optional(),
-  bg_type: z.enum(["theme", "solid", "gradient", "image"]).optional(),
+  bg_type: z.enum(["theme", "solid", "gradient", "image", "video", "pattern"]).optional(),
   bg_color: z
     .string()
     .trim()
-    .max(7)
-    .refine((value) => value === "" || HEX_COLOR_REGEX.test(value), "Invalid background color")
+    .max(30)
+    .refine(
+      (value) => value === "" || HEX_COLOR_REGEX.test(value) || /^pattern:\w+$/.test(value),
+      "Invalid background color or pattern"
+    )
     .optional(),
   bg_gradient_from: z
     .string()
@@ -140,6 +157,12 @@ export const settingsSchema = z.object({
   // Appearance: Animation & Social Position
   link_animation: z.enum(["none", "fade-in", "slide-up", "bounce", "stagger"]).optional(),
   social_position: z.enum(["top", "bottom"]).optional(),
+  // Tracking & Analytics
+  ga_measurement_id: z.string().trim().max(30).optional(),
+  fb_pixel_id: z.string().trim().max(30).optional(),
+  tiktok_pixel_id: z.string().trim().max(30).optional(),
+  // Password protection
+  page_password: z.string().max(100).optional(),
 });
 
 export const socialIconSchema = z.object({

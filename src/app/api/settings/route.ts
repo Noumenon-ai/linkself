@@ -16,6 +16,8 @@ const SETTINGS_FIELDS = [
   "nsfw", "tip_enabled", "tip_text", "tip_url",
   "seo_title", "seo_description", "og_image_url", "hide_from_search",
   "link_animation", "social_position",
+  "ga_measurement_id", "fb_pixel_id", "tiktok_pixel_id",
+  "page_password",
   "plan",
 ] as const;
 
@@ -47,6 +49,8 @@ const UPDATABLE_FIELDS = [
   "nsfw", "tip_enabled", "tip_text", "tip_url",
   "seo_title", "seo_description", "og_image_url", "hide_from_search",
   "link_animation", "social_position",
+  "ga_measurement_id", "fb_pixel_id", "tiktok_pixel_id",
+  "page_password",
   "username",
 ] as const;
 

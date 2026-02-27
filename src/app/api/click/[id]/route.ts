@@ -38,5 +38,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   await execute("INSERT INTO link_clicks (link_id, referrer, country, device, created_at) VALUES (?, ?, ?, ?, ?)",
     linkId, referrer, country, device, nowIso());
 
-  return NextResponse.redirect(link.url, 302);
+  // Append UTM parameters if configured
+  let finalUrl = link.url;
+  try {
+    const urlObj = new URL(link.url);
+    if (link.utm_source) urlObj.searchParams.set("utm_source", link.utm_source);
+    if (link.utm_medium) urlObj.searchParams.set("utm_medium", link.utm_medium);
+    if (link.utm_campaign) urlObj.searchParams.set("utm_campaign", link.utm_campaign);
+    finalUrl = urlObj.toString();
+  } catch {
+    // If URL parsing fails, redirect to original
+  }
+
+  return NextResponse.redirect(finalUrl, 302);
 }

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { GripVertical, Pencil, Trash2, Eye, EyeOff, ExternalLink, Clock, Calendar } from "lucide-react";
+import { GripVertical, Pencil, Trash2, Eye, EyeOff, ExternalLink, Clock, Calendar, Pin } from "lucide-react";
 import type { LinkRow } from "@/lib/db/schema";
 import { LinkForm } from "./link-form";
 import { cn } from "@/lib/cn";
+
+type LinkType = "link" | "header" | "divider" | "embed" | "email-collector" | "countdown" | "contact-form" | "faq" | "image-gallery" | "testimonial" | "map";
 
 interface LinkListItemProps {
   link: LinkRow;
@@ -39,6 +41,17 @@ function getScheduleStatus(link: LinkRow): { label: string; color: string } | nu
   }
   return null;
 }
+
+const BLOCK_BADGES: Record<string, { label: string; bg: string; text: string }> = {
+  embed: { label: "Embed", bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-600 dark:text-blue-400" },
+  "email-collector": { label: "Email Collector", bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-600 dark:text-green-400" },
+  countdown: { label: "Countdown", bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-600 dark:text-orange-400" },
+  "contact-form": { label: "Contact Form", bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-600 dark:text-blue-400" },
+  faq: { label: "FAQ", bg: "bg-purple-100 dark:bg-purple-900/30", text: "text-purple-600 dark:text-purple-400" },
+  "image-gallery": { label: "Gallery", bg: "bg-pink-100 dark:bg-pink-900/30", text: "text-pink-600 dark:text-pink-400" },
+  testimonial: { label: "Testimonial", bg: "bg-yellow-100 dark:bg-yellow-900/30", text: "text-yellow-600 dark:text-yellow-400" },
+  map: { label: "Map", bg: "bg-teal-100 dark:bg-teal-900/30", text: "text-teal-600 dark:text-teal-400" },
+};
 
 export function LinkListItem({ link, onUpdate, onDelete, onMoveUp, onMoveDown }: LinkListItemProps) {
   const [editing, setEditing] = useState(false);
@@ -76,7 +89,7 @@ export function LinkListItem({ link, onUpdate, onDelete, onMoveUp, onMoveDown }:
     }
   }
 
-  const linkType = (link.link_type || "link") as "link" | "header" | "divider" | "embed";
+  const linkType = (link.link_type || "link") as LinkType;
 
   if (editing) {
     return (
@@ -89,6 +102,11 @@ export function LinkListItem({ link, onUpdate, onDelete, onMoveUp, onMoveDown }:
             link_type: linkType,
             embed_url: link.embed_url || "",
             nsfw: link.nsfw === 1,
+            block_config: link.block_config || "",
+            thumbnail_url: link.thumbnail_url || "",
+            utm_source: link.utm_source || "",
+            utm_medium: link.utm_medium || "",
+            utm_campaign: link.utm_campaign || "",
           }}
           linkType={linkType}
           onSave={async (data) => {
@@ -156,6 +174,9 @@ export function LinkListItem({ link, onUpdate, onDelete, onMoveUp, onMoveDown }:
     );
   }
 
+  // Badge for block types
+  const badge = BLOCK_BADGES[linkType];
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 group">
       <div className="flex items-center gap-3 p-4">
@@ -171,17 +192,22 @@ export function LinkListItem({ link, onUpdate, onDelete, onMoveUp, onMoveDown }:
             <span className={cn("font-medium text-slate-900 dark:text-white truncate", !link.is_active && "opacity-50")}>
               {link.title}
             </span>
-            {linkType === "embed" && (
-              <span className="inline-flex items-center rounded bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">Embed</span>
+            {badge && (
+              <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase", badge.bg, badge.text)}>
+                {badge.label}
+              </span>
             )}
             {link.nsfw === 1 && (
               <span className="inline-flex items-center rounded bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 text-[10px] font-bold uppercase text-red-600 dark:text-red-400">18+</span>
+            )}
+            {link.is_pinned === 1 && (
+              <Pin className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 flex-shrink-0 fill-current" />
             )}
             {hasSchedule && (
               <Clock className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 flex-shrink-0" />
             )}
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 truncate">{linkType === "embed" ? (link.embed_url || link.url) : link.url}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400 truncate">{linkType === "embed" ? (link.embed_url || link.url) : link.url || (badge ? badge.label + " block" : "")}</p>
           {scheduleStatus && (
             <p className={cn("text-xs mt-0.5 flex items-center gap-1", scheduleStatus.color)}>
               <Calendar className="h-3 w-3" />
@@ -193,6 +219,17 @@ export function LinkListItem({ link, onUpdate, onDelete, onMoveUp, onMoveDown }:
         <span className="text-sm text-slate-600 dark:text-slate-400 tabular-nums">{link.clicks} clicks</span>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => onUpdate(link.id, { is_pinned: !link.is_pinned })}
+            className={cn(
+              "p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors",
+              link.is_pinned ? "text-indigo-500" : "text-slate-500"
+            )}
+            aria-label={link.is_pinned ? "Unpin link" : "Pin link"}
+            title={link.is_pinned ? "Unpin link" : "Pin to top"}
+          >
+            <Pin className={cn("h-4 w-4", link.is_pinned && "fill-current")} />
+          </button>
           <button
             onClick={() => setShowSchedule(!showSchedule)}
             className={cn(
@@ -211,15 +248,17 @@ export function LinkListItem({ link, onUpdate, onDelete, onMoveUp, onMoveDown }:
           >
             {link.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </button>
-          <a
-            href={link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"
-            aria-label="Open link in new tab"
-          >
-            <ExternalLink className="h-4 w-4" />
-          </a>
+          {linkType === "link" && link.url && (
+            <a
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"
+              aria-label="Open link in new tab"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
           <button onClick={() => setEditing(true)} className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500" aria-label="Edit link">
             <Pencil className="h-4 w-4" />
           </button>

@@ -22,9 +22,13 @@ import {
   getLayoutClasses,
   getAvatarShapeClass,
   getAvatarBorderClass,
+  parsePatternBgColor,
   FONT_FAMILIES,
+  PATTERN_PRESETS,
+  PATTERN_NAMES,
   type BackgroundType,
   type GradientDirection,
+  type PatternName,
   type BtnShape,
   type BtnHover,
   type BtnShadow,
@@ -91,6 +95,7 @@ export default function AppearancePage() {
   const [bgGradientTo, setBgGradientTo] = useState(DEFAULT_GRADIENT_TO);
   const [bgGradientDirection, setBgGradientDirection] = useState<GradientDirection>("top-bottom");
   const [bgImageUrl, setBgImageUrl] = useState("");
+  const [bgPattern, setBgPattern] = useState<PatternName>("dots");
 
   // Buttons
   const [btnShape, setBtnShape] = useState<BtnShape>("rounded");
@@ -149,6 +154,8 @@ export default function AppearancePage() {
         setBgGradientTo(normalizeHexColor(data.bg_gradient_to, DEFAULT_GRADIENT_TO));
         setBgGradientDirection(normalizeGradientDirection(data.bg_gradient_direction));
         setBgImageUrl(data.bg_image_url || "");
+        const loadedPattern = parsePatternBgColor(data.bg_color);
+        if (loadedPattern) setBgPattern(loadedPattern);
         setBtnShape((data.btn_shape as BtnShape) || "rounded");
         setBtnColor(data.btn_color || "");
         setBtnTextColor(data.btn_text_color || "");
@@ -206,7 +213,7 @@ export default function AppearancePage() {
         body: JSON.stringify({
           display_name: displayName, bio: bio || undefined, avatar_url: avatarUrl || null, username,
           theme: selectedTheme, custom_css: customCss,
-          bg_type: bgType, bg_color: bgColor, bg_gradient_from: bgGradientFrom, bg_gradient_to: bgGradientTo, bg_gradient_direction: bgGradientDirection, bg_image_url: bgImageUrl,
+          bg_type: bgType, bg_color: bgType === "pattern" ? `pattern:${bgPattern}` : bgColor, bg_gradient_from: bgGradientFrom, bg_gradient_to: bgGradientTo, bg_gradient_direction: bgGradientDirection, bg_image_url: bgImageUrl,
           btn_shape: btnShape, btn_color: btnColor, btn_text_color: btnTextColor, btn_hover: btnHover, btn_shadow: btnShadow,
           font_family: fontFamily, font_size: fontSize, text_color: textColor,
           layout: layoutMode, avatar_shape: avatarShape, avatar_border: avatarBorder,
@@ -227,7 +234,8 @@ export default function AppearancePage() {
   }
 
   const theme = getTheme(selectedTheme);
-  const previewBgStyle = buildBackgroundStyle({ bg_type: bgType, bg_color: bgColor, bg_gradient_from: bgGradientFrom, bg_gradient_to: bgGradientTo, bg_gradient_direction: bgGradientDirection, bg_image_url: bgImageUrl });
+  const previewBgColor = bgType === "pattern" ? `pattern:${bgPattern}` : bgColor;
+  const previewBgStyle = buildBackgroundStyle({ bg_type: bgType, bg_color: previewBgColor, bg_gradient_from: bgGradientFrom, bg_gradient_to: bgGradientTo, bg_gradient_direction: bgGradientDirection, bg_image_url: bgImageUrl });
   const previewBtnStyle = buildButtonStyle({ btn_color: btnColor, btn_text_color: btnTextColor });
   const previewLayout = getLayoutClasses(layoutMode);
   const previewFontSize = getFontSizeClass(fontSize);
@@ -326,6 +334,8 @@ export default function AppearancePage() {
           { value: "solid", label: "Solid Color" },
           { value: "gradient", label: "Gradient" },
           { value: "image", label: "Image URL" },
+          { value: "video", label: "Video URL" },
+          { value: "pattern", label: "Pattern" },
         ]} />
         {bgType === "solid" && <ColorPicker label="Background Color" value={bgColor} onChange={setBgColor} />}
         {bgType === "gradient" && (
@@ -342,6 +352,40 @@ export default function AppearancePage() {
           </div>
         )}
         {bgType === "image" && <Input label="Image URL" value={bgImageUrl} onChange={(e) => setBgImageUrl(e.target.value)} placeholder="https://..." />}
+        {bgType === "video" && (
+          <div className="space-y-2">
+            <Input label="Video URL" value={bgImageUrl} onChange={(e) => setBgImageUrl(e.target.value)} placeholder="https://example.com/video.mp4" />
+            <p className="text-xs text-slate-500">Direct link to an MP4 or WebM video file. The video will autoplay muted and loop behind your profile.</p>
+          </div>
+        )}
+        {bgType === "pattern" && (
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Choose Pattern</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {PATTERN_NAMES.map((name) => {
+                const preset = PATTERN_PRESETS[name];
+                const previewStyle: React.CSSProperties = {
+                  backgroundImage: preset.backgroundImage,
+                  ...(preset.backgroundSize ? { backgroundSize: preset.backgroundSize } : {}),
+                  backgroundColor: "#f8fafc",
+                };
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setBgPattern(name)}
+                    className={`relative h-20 rounded-lg border-2 transition-all ${bgPattern === name ? "border-indigo-500 ring-2 ring-indigo-500/30" : "border-slate-200 dark:border-slate-600 hover:border-slate-300"}`}
+                    style={previewStyle}
+                  >
+                    <span className="absolute bottom-1 left-0 right-0 text-center text-[10px] font-medium text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-slate-800/80 rounded mx-1 py-0.5">
+                      {preset.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </Section>
 
       {/* Button Style */}

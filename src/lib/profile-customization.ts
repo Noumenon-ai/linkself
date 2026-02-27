@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-export const BACKGROUND_TYPES = ["theme", "solid", "gradient", "image"] as const;
+export const BACKGROUND_TYPES = ["theme", "solid", "gradient", "image", "video", "pattern"] as const;
 export type BackgroundType = (typeof BACKGROUND_TYPES)[number];
 
 export const GRADIENT_DIRECTIONS = ["top-bottom", "left-right", "diagonal"] as const;
@@ -50,13 +50,50 @@ export function normalizeHexColor(value: string | null | undefined, fallback: st
 }
 
 export function normalizeBackgroundType(value: string | null | undefined): BackgroundType {
-  if (value === "solid" || value === "gradient" || value === "image") return value;
+  if (value === "solid" || value === "gradient" || value === "image" || value === "video" || value === "pattern") return value;
   return "theme";
 }
 
 export function normalizeGradientDirection(value: string | null | undefined): GradientDirection {
   if (value === "left-right" || value === "diagonal") return value;
   return "top-bottom";
+}
+
+// ---- Pattern Backgrounds ----
+
+export const PATTERN_PRESETS = {
+  dots: {
+    name: "Dots",
+    backgroundImage: "radial-gradient(circle, #00000015 1px, transparent 1px)",
+    backgroundSize: "20px 20px",
+  },
+  grid: {
+    name: "Grid",
+    backgroundImage: "linear-gradient(#00000010 1px, transparent 1px), linear-gradient(90deg, #00000010 1px, transparent 1px)",
+    backgroundSize: "20px 20px",
+  },
+  diagonal: {
+    name: "Diagonal",
+    backgroundImage: "repeating-linear-gradient(45deg, #00000008, #00000008 10px, transparent 10px, transparent 20px)",
+    backgroundSize: undefined,
+  },
+  zigzag: {
+    name: "Zigzag",
+    backgroundImage: "linear-gradient(135deg, #00000010 25%, transparent 25%) -50px 0, linear-gradient(225deg, #00000010 25%, transparent 25%) -50px 0, linear-gradient(315deg, #00000010 25%, transparent 25%), linear-gradient(45deg, #00000010 25%, transparent 25%)",
+    backgroundSize: "40px 40px",
+  },
+} as const;
+
+export type PatternName = keyof typeof PATTERN_PRESETS;
+export const PATTERN_NAMES = Object.keys(PATTERN_PRESETS) as PatternName[];
+
+export function parsePatternBgColor(bgColor: string | null | undefined): PatternName | null {
+  if (!bgColor) return null;
+  const match = bgColor.match(/^pattern:(\w+)$/);
+  if (!match) return null;
+  const name = match[1] as string;
+  if (name in PATTERN_PRESETS) return name as PatternName;
+  return null;
 }
 
 interface BackgroundSettings {
@@ -71,6 +108,24 @@ interface BackgroundSettings {
 export function buildBackgroundStyle(settings: BackgroundSettings): CSSProperties {
   const bgType = normalizeBackgroundType(settings.bg_type);
   if (bgType === "theme") return {};
+
+  if (bgType === "video") {
+    // Video backgrounds are rendered as HTML elements, not CSS
+    return {};
+  }
+
+  if (bgType === "pattern") {
+    const patternName = parsePatternBgColor(settings.bg_color);
+    if (!patternName) return {};
+    const pattern = PATTERN_PRESETS[patternName];
+    const style: CSSProperties = {
+      backgroundImage: pattern.backgroundImage,
+    };
+    if (pattern.backgroundSize) {
+      style.backgroundSize = pattern.backgroundSize;
+    }
+    return style;
+  }
 
   if (bgType === "solid") {
     return {

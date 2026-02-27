@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Plus, Type, Minus, Play } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Plus, Type, Minus, Play, ChevronDown, Mail, Timer, MessageSquare, HelpCircle, Image, Quote, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LinkForm, type LinkFormData } from "@/components/dashboard/link-form";
 import { LinkListItem } from "@/components/dashboard/link-list-item";
@@ -10,13 +10,29 @@ import { apiFetch } from "@/lib/api-client";
 import type { LinkRow, SocialIconRow } from "@/lib/db/schema";
 import { Trash2 } from "lucide-react";
 
-type AddFormType = "link" | "header" | "divider" | "embed" | null;
+type AddFormType = "link" | "header" | "divider" | "embed" | "email-collector" | "countdown" | "contact-form" | "faq" | "image-gallery" | "testimonial" | "map" | null;
+
+const BLOCK_OPTIONS: { type: AddFormType; label: string; icon: React.ReactNode; group: string }[] = [
+  { type: "link", label: "Link", icon: <Plus className="h-4 w-4" />, group: "Basic" },
+  { type: "header", label: "Header", icon: <Type className="h-4 w-4" />, group: "Basic" },
+  { type: "divider", label: "Divider", icon: <Minus className="h-4 w-4" />, group: "Basic" },
+  { type: "embed", label: "Embed", icon: <Play className="h-4 w-4" />, group: "Media" },
+  { type: "image-gallery", label: "Image Gallery", icon: <Image className="h-4 w-4" />, group: "Media" },
+  { type: "email-collector", label: "Email Collector", icon: <Mail className="h-4 w-4" />, group: "Interactive" },
+  { type: "countdown", label: "Countdown Timer", icon: <Timer className="h-4 w-4" />, group: "Interactive" },
+  { type: "contact-form", label: "Contact Form", icon: <MessageSquare className="h-4 w-4" />, group: "Interactive" },
+  { type: "faq", label: "FAQ / Accordion", icon: <HelpCircle className="h-4 w-4" />, group: "Content" },
+  { type: "testimonial", label: "Testimonial", icon: <Quote className="h-4 w-4" />, group: "Content" },
+  { type: "map", label: "Map / Location", icon: <MapPin className="h-4 w-4" />, group: "Content" },
+];
 
 export default function LinksPage() {
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [socialIcons, setSocialIcons] = useState<SocialIconRow[]>([]);
   const [showAddForm, setShowAddForm] = useState<AddFormType>(null);
+  const [showBlockMenu, setShowBlockMenu] = useState(false);
   const [loading, setLoading] = useState(true);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const fetchData = useCallback(async () => {
     const [linksData, iconsData] = await Promise.all([
@@ -29,6 +45,19 @@ export default function LinksPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Close menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowBlockMenu(false);
+      }
+    }
+    if (showBlockMenu) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [showBlockMenu]);
 
   async function handleAddLink(data: LinkFormData) {
     await apiFetch("/api/links", {
@@ -89,6 +118,9 @@ export default function LinksPage() {
     );
   }
 
+  // Group block options
+  const groups = [...new Set(BLOCK_OPTIONS.map(o => o.group))];
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -103,9 +135,35 @@ export default function LinksPage() {
           <Button variant="secondary" onClick={() => setShowAddForm(showAddForm === "divider" ? null : "divider")}>
             <Minus className="h-4 w-4" /> Divider
           </Button>
-          <Button variant="secondary" onClick={() => setShowAddForm(showAddForm === "embed" ? null : "embed")}>
-            <Play className="h-4 w-4" /> Embed
-          </Button>
+
+          {/* Add Block dropdown */}
+          <div className="relative" ref={menuRef}>
+            <Button variant="secondary" onClick={() => setShowBlockMenu(!showBlockMenu)}>
+              <Plus className="h-4 w-4" /> Block <ChevronDown className="h-3 w-3 ml-1" />
+            </Button>
+            {showBlockMenu && (
+              <div className="absolute right-0 top-full mt-1 z-50 w-56 rounded-xl border border-slate-200 bg-white shadow-lg dark:bg-slate-800 dark:border-slate-700 py-1 overflow-hidden">
+                {groups.map((group) => (
+                  <div key={group}>
+                    <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{group}</p>
+                    {BLOCK_OPTIONS.filter(o => o.group === group).map((option) => (
+                      <button
+                        key={option.type}
+                        onClick={() => {
+                          setShowAddForm(option.type);
+                          setShowBlockMenu(false);
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        {option.icon}
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

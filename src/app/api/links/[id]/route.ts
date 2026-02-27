@@ -46,6 +46,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (updates.scheduled_end !== undefined) { fields.push("scheduled_end = ?"); values.push(updates.scheduled_end); }
   if (updates.link_type !== undefined) { fields.push("link_type = ?"); values.push(updates.link_type); }
   if (updates.embed_url !== undefined) { fields.push("embed_url = ?"); values.push(updates.embed_url); }
+  if (updates.block_config !== undefined) { fields.push("block_config = ?"); values.push(updates.block_config); }
+  if (updates.utm_source !== undefined) { fields.push("utm_source = ?"); values.push(updates.utm_source); }
+  if (updates.utm_medium !== undefined) { fields.push("utm_medium = ?"); values.push(updates.utm_medium); }
+  if (updates.utm_campaign !== undefined) { fields.push("utm_campaign = ?"); values.push(updates.utm_campaign); }
+  if (updates.is_pinned !== undefined) { fields.push("is_pinned = ?"); values.push(updates.is_pinned ? 1 : 0); }
 
   if (fields.length > 0) {
     values.push(linkId);

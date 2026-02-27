@@ -37,6 +37,12 @@ export interface UserRow {
   // Appearance: Animation & Social Position
   link_animation: string;
   social_position: string;
+  // Tracking & Analytics
+  ga_measurement_id: string;
+  fb_pixel_id: string;
+  tiktok_pixel_id: string;
+  // Password protection
+  page_password: string;
   plan: string;
   created_at: string;
   updated_at: string;
@@ -60,6 +66,14 @@ export interface LinkRow {
   embed_url: string;
   scheduled_start: string;
   scheduled_end: string;
+  // UTM parameters
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  // Pinned
+  is_pinned: number;
+  // Block config (JSON string for advanced block types)
+  block_config: string;
   created_at: string;
 }
 

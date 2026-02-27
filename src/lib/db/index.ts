@@ -39,6 +39,12 @@ const USER_COLUMN_MIGRATIONS: Array<{ name: string; definition: string }> = [
   // Appearance: Animation & Social Position
   { name: "link_animation", definition: "link_animation TEXT NOT NULL DEFAULT 'fade-in'" },
   { name: "social_position", definition: "social_position TEXT NOT NULL DEFAULT 'top'" },
+  // Tracking & Analytics
+  { name: "ga_measurement_id", definition: "ga_measurement_id TEXT DEFAULT ''" },
+  { name: "fb_pixel_id", definition: "fb_pixel_id TEXT DEFAULT ''" },
+  { name: "tiktok_pixel_id", definition: "tiktok_pixel_id TEXT DEFAULT ''" },
+  // Password protection
+  { name: "page_password", definition: "page_password TEXT DEFAULT ''" },
 ];
 
 const LINK_COLUMN_MIGRATIONS: Array<{ name: string; definition: string }> = [
@@ -50,6 +56,13 @@ const LINK_COLUMN_MIGRATIONS: Array<{ name: string; definition: string }> = [
   { name: "scheduled_end", definition: "scheduled_end TEXT DEFAULT ''" },
   { name: "link_type", definition: "link_type TEXT NOT NULL DEFAULT 'link'" },
   { name: "embed_url", definition: "embed_url TEXT DEFAULT ''" },
+  // UTM parameters
+  { name: "utm_source", definition: "utm_source TEXT DEFAULT ''" },
+  { name: "utm_medium", definition: "utm_medium TEXT DEFAULT ''" },
+  { name: "utm_campaign", definition: "utm_campaign TEXT DEFAULT ''" },
+  // Pinned links
+  { name: "is_pinned", definition: "is_pinned INTEGER NOT NULL DEFAULT 0" },
+  { name: "block_config", definition: "block_config TEXT DEFAULT ''" },
 ];
 
 // ===== TURSO (libSQL) adapter =====
