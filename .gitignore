@@ -1,0 +1,10 @@
+node_modules/
+.next/
+*.db
+*.db-shm
+*.db-wal
+.env.local
+.env*.local
+.vercel/
+uploads/
+!uploads/.gitkeep

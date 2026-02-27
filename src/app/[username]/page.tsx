@@ -1,0 +1,189 @@
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { queryOne, queryAll } from "@/lib/db";
+import { getTheme } from "@/lib/themes";
+import {
+  buildBackgroundStyle,
+  buildButtonStyle,
+  normalizeBackgroundType,
+  sanitizeCustomCss,
+  getBtnShapeClass,
+  getBtnHoverClass,
+  getBtnShadowClass,
+  getFontSizeClass,
+  getGoogleFontsUrl,
+  getLayoutClasses,
+  getAvatarShapeClass,
+  getAvatarBorderClass,
+} from "@/lib/profile-customization";
+import { Avatar } from "@/components/profile/avatar";
+import { SocialIconsRow } from "@/components/profile/social-icons-row";
+import type { UserRow, LinkRow, SocialIconRow } from "@/lib/db/schema";
+
+interface Props {
+  params: Promise<{ username: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { username } = await params;
+  const user = queryOne<UserRow>("SELECT display_name, bio, avatar_url FROM users WHERE username = ?", username);
+
+  if (!user) return { title: "Not Found" };
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  return {
+    title: `${user.display_name} | LinkSelf`,
+    description: user.bio || `Check out ${user.display_name}'s links`,
+    openGraph: {
+      title: user.display_name,
+      description: user.bio || `Check out ${user.display_name}'s links`,
+      url: `${appUrl}/${username}`,
+      ...(user.avatar_url && { images: [user.avatar_url] }),
+    },
+    twitter: {
+      card: "summary",
+      title: user.display_name,
+      description: user.bio || `Check out ${user.display_name}'s links`,
+      ...(user.avatar_url && { images: [user.avatar_url] }),
+    },
+  };
+}
+
+export default async function ProfilePage({ params }: Props) {
+  const { username } = await params;
+
+  const user = queryOne<UserRow>("SELECT * FROM users WHERE username = ?", username);
+  if (!user) notFound();
+
+  const links = queryAll<LinkRow>("SELECT * FROM links WHERE user_id = ? AND is_active = 1 ORDER BY position ASC", user.id);
+  const socialIcons = queryAll<SocialIconRow>("SELECT * FROM social_icons WHERE user_id = ? ORDER BY position ASC", user.id);
+
+  const theme = getTheme(user.theme);
+  const bgStyle = buildBackgroundStyle({
+    bg_type: user.bg_type,
+    bg_color: user.bg_color,
+    bg_gradient_from: user.bg_gradient_from,
+    bg_gradient_to: user.bg_gradient_to,
+    bg_gradient_direction: user.bg_gradient_direction,
+    bg_image_url: user.bg_image_url,
+  });
+  const useThemeBg = normalizeBackgroundType(user.bg_type) === "theme";
+  const customCss = sanitizeCustomCss(user.custom_css);
+
+  // Button defaults from user settings
+  const defaultBtnStyle = buildButtonStyle({ btn_color: user.btn_color, btn_text_color: user.btn_text_color });
+  const btnShape = getBtnShapeClass(user.btn_shape);
+  const btnHover = getBtnHoverClass(user.btn_hover);
+  const btnShadow = getBtnShadowClass(user.btn_shadow);
+
+  // Typography
+  const fontFamily = user.font_family || "Inter";
+  const fontSize = getFontSizeClass(user.font_size);
+  const textColor = user.text_color?.trim() || "";
+
+  // Layout
+  const layout = getLayoutClasses(user.layout);
+
+  // Avatar
+  const avatarShape = getAvatarShapeClass(user.avatar_shape);
+  const avatarBorder = getAvatarBorderClass(user.avatar_border);
+  const hideAvatar = user.avatar_shape === "none";
+
+  // Branding
+  const hideBranding = user.plan === "business";
+
+  // Text color override style
+  const textStyle = textColor ? { color: textColor } : {};
+
+  return (
+    <>
+      {/* Google Font */}
+      {fontFamily !== "Inter" && (
+        // eslint-disable-next-line @next/next/no-page-custom-font
+        <link rel="stylesheet" href={getGoogleFontsUrl(fontFamily)} />
+      )}
+
+      <main
+        className={`profile-page min-h-screen flex flex-col ${layout.wrapper} px-4 py-12 ${useThemeBg ? theme.bgClass : ""}`.trim()}
+        style={{ ...bgStyle, fontFamily: `"${fontFamily}", sans-serif` }}
+      >
+        {customCss && <style>{customCss}</style>}
+
+        <div className={`w-full max-w-md flex flex-col gap-6 animate-fade-in ${layout.inner}`}>
+          {/* Avatar */}
+          {!hideAvatar && (
+            <div className={`profile-avatar ${avatarShape} ${avatarBorder} overflow-hidden`}>
+              <Avatar
+                src={user.avatar_url}
+                name={user.display_name}
+                ringClass={!user.avatar_border || user.avatar_border === "none" ? theme.avatarClass : ""}
+                className={avatarShape}
+              />
+            </div>
+          )}
+
+          {/* Name & Bio */}
+          <div>
+            <h1
+              className={`profile-name ${fontSize.name} font-bold ${textColor ? "" : theme.textClass}`}
+              style={textStyle}
+            >
+              {user.display_name}
+            </h1>
+            {user.bio && (
+              <p
+                className={`profile-bio mt-2 ${fontSize.bio} opacity-80 max-w-xs ${textColor ? "" : theme.textClass}`}
+                style={textStyle}
+              >
+                {user.bio}
+              </p>
+            )}
+          </div>
+
+          {/* Social Icons */}
+          <SocialIconsRow icons={socialIcons} textClass={textColor ? "" : theme.textClass} className="social-row" style={textStyle} />
+
+          {/* Links */}
+          <div className="w-full space-y-3">
+            {links.map((link) => {
+              // Per-link overrides
+              const linkBtnStyle = link.bg_color || link.text_color
+                ? buildButtonStyle({ btn_color: link.bg_color || user.btn_color, btn_text_color: link.text_color || user.btn_text_color })
+                : defaultBtnStyle;
+              const linkShape = link.shape ? getBtnShapeClass(link.shape) : btnShape;
+
+              return (
+                <a
+                  key={link.id}
+                  href={`/api/click/${link.id}`}
+                  className={`link-button block w-full px-5 py-3.5 text-center font-semibold transition-all duration-200 ${linkShape} ${btnHover} ${btnShadow} ${!link.bg_color && !user.btn_color ? theme.cardClass : ""}`}
+                  style={linkBtnStyle}
+                >
+                  <span className="flex items-center justify-center gap-3">
+                    {link.thumbnail_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={link.thumbnail_url} alt="" className="h-8 w-8 rounded object-cover" />
+                    )}
+                    {link.icon && <span>{link.icon}</span>}
+                    <span>{link.title}</span>
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          {!hideBranding && (
+            <a
+              href="/"
+              className={`powered-by mt-8 text-xs ${theme.footerClass} hover:opacity-80 transition-opacity`}
+            >
+              Powered by LinkSelf
+            </a>
+          )}
+        </div>
+      </main>
+    </>
+  );
+}
