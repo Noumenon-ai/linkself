@@ -13,7 +13,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const linkId = parseInt(id, 10);
   if (isNaN(linkId)) return jsonError("Invalid link ID");
 
-  const link = queryOne<LinkRow>("SELECT * FROM links WHERE id = ? AND user_id = ?", linkId, session.userId);
+  const link = await queryOne<LinkRow>("SELECT * FROM links WHERE id = ? AND user_id = ?", linkId, session.userId);
   if (!link) return jsonError("Link not found", 404);
 
   let body: unknown;
@@ -45,10 +45,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (fields.length > 0) {
     values.push(linkId);
-    execute(`UPDATE links SET ${fields.join(", ")} WHERE id = ?`, ...values);
+    await execute(`UPDATE links SET ${fields.join(", ")} WHERE id = ?`, ...values);
   }
 
-  const updated = queryOne<LinkRow>("SELECT * FROM links WHERE id = ?", linkId);
+  const updated = await queryOne<LinkRow>("SELECT * FROM links WHERE id = ?", linkId);
   return jsonOk({ link: updated });
 }
 
@@ -60,11 +60,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const linkId = parseInt(id, 10);
   if (isNaN(linkId)) return jsonError("Invalid link ID");
 
-  const link = queryOne<LinkRow>("SELECT * FROM links WHERE id = ? AND user_id = ?", linkId, session.userId);
+  const link = await queryOne<LinkRow>("SELECT * FROM links WHERE id = ? AND user_id = ?", linkId, session.userId);
   if (!link) return jsonError("Link not found", 404);
 
-  execute("DELETE FROM link_clicks WHERE link_id = ?", linkId);
-  execute("DELETE FROM links WHERE id = ?", linkId);
+  await execute("DELETE FROM link_clicks WHERE link_id = ?", linkId);
+  await execute("DELETE FROM links WHERE id = ?", linkId);
 
   return jsonOk({ success: true });
 }

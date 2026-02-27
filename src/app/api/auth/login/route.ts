@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
   const { email, password } = parsed.data;
 
-  const user = queryOne<UserRow>("SELECT * FROM users WHERE email = ?", email);
+  const user = await queryOne<UserRow>("SELECT * FROM users WHERE email = ?", email);
   if (!user) {
     return jsonError(
       { code: "INVALID_CREDENTIALS", message: "Invalid email or password" },

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
   // Clicks by day
-  const byDay = queryAll<{ date: string; clicks: number }>(
+  const byDay = await queryAll<{ date: string; clicks: number }>(
     `SELECT DATE(lc.created_at) as date, COUNT(*) as clicks
      FROM link_clicks lc JOIN links l ON lc.link_id = l.id
      WHERE l.user_id = ? AND lc.created_at >= ?
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   }
 
   // By referrer
-  const byReferrer = queryAll<{ referrer: string; count: number }>(
+  const byReferrer = await queryAll<{ referrer: string; count: number }>(
     `SELECT CASE WHEN lc.referrer = '' THEN 'Direct' ELSE lc.referrer END as referrer, COUNT(*) as count
      FROM link_clicks lc JOIN links l ON lc.link_id = l.id
      WHERE l.user_id = ? AND lc.created_at >= ?
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   );
 
   // By device
-  const byDevice = queryAll<{ device: string; count: number }>(
+  const byDevice = await queryAll<{ device: string; count: number }>(
     `SELECT CASE WHEN lc.device = '' THEN 'Unknown' ELSE lc.device END as device, COUNT(*) as count
      FROM link_clicks lc JOIN links l ON lc.link_id = l.id
      WHERE l.user_id = ? AND lc.created_at >= ?
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
   );
 
   // By country
-  const byCountry = queryAll<{ country: string; count: number }>(
+  const byCountry = await queryAll<{ country: string; count: number }>(
     `SELECT CASE WHEN lc.country = '' THEN 'Unknown' ELSE lc.country END as country, COUNT(*) as count
      FROM link_clicks lc JOIN links l ON lc.link_id = l.id
      WHERE l.user_id = ? AND lc.created_at >= ?
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
   );
 
   // Top links
-  const topLinks = queryAll<{ title: string; clicks: number }>(
+  const topLinks = await queryAll<{ title: string; clicks: number }>(
     `SELECT l.title, COUNT(lc.id) as clicks
      FROM link_clicks lc JOIN links l ON lc.link_id = l.id
      WHERE l.user_id = ? AND lc.created_at >= ?

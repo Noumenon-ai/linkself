@@ -7,7 +7,7 @@ export async function GET() {
   const session = await getServerSession();
   if (!session) return jsonError("Not authenticated", 401);
 
-  const user = queryOne<UserRow>("SELECT id, username, email, display_name, bio, avatar_url, theme, plan FROM users WHERE id = ?", session.userId);
+  const user = await queryOne<UserRow>("SELECT id, username, email, display_name, bio, avatar_url, theme, plan FROM users WHERE id = ?", session.userId);
 
   if (!user) return jsonError("User not found", 404);
 

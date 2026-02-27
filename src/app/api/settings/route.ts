@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const session = await getRequestSession(request);
   if (!session) return jsonError("Not authenticated", 401);
 
-  const user = queryOne<UserRow>(
+  const user = await queryOne<UserRow>(
     `SELECT ${SETTINGS_FIELDS.join(", ")} FROM users WHERE id = ?`,
     session.userId
   );
@@ -68,7 +68,7 @@ export async function PATCH(request: NextRequest) {
 
   // Handle username change (check uniqueness)
   if (updates.username !== undefined) {
-    const existing = queryOne<{ id: number }>(
+    const existing = await queryOne<{ id: number }>(
       "SELECT id FROM users WHERE username = ? AND id != ?",
       updates.username, session.userId
     );
@@ -99,7 +99,7 @@ export async function PATCH(request: NextRequest) {
     fields.push("updated_at = ?");
     values.push(nowIso());
     values.push(session.userId);
-    execute(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`, ...values);
+    await execute(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`, ...values);
   }
 
   return jsonOk({ success: true });

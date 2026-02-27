@@ -114,53 +114,51 @@ function getSqlite(): SqliteDb {
   return sqliteDb;
 }
 
-// ===== Unified query helpers =====
+// ===== Unified query helpers (async — works with both SQLite and Turso) =====
 
-export function queryOne<T>(sql: string, ...params: unknown[]): T | undefined {
+export async function queryOne<T>(sql: string, ...params: unknown[]): Promise<T | undefined> {
   if (USE_TURSO) {
-    throw new Error("Use queryOneAsync in Turso mode");
+    const client = await getTurso();
+    const result = await client.execute({ sql, args: params as never[] });
+    return (result.rows[0] as T) ?? undefined;
   }
   return getSqlite().prepare(sql).get(...params) as T | undefined;
 }
 
-export function queryAll<T>(sql: string, ...params: unknown[]): T[] {
+export async function queryAll<T>(sql: string, ...params: unknown[]): Promise<T[]> {
   if (USE_TURSO) {
-    throw new Error("Use queryAllAsync in Turso mode");
+    const client = await getTurso();
+    const result = await client.execute({ sql, args: params as never[] });
+    return result.rows as T[];
   }
   return getSqlite().prepare(sql).all(...params) as T[];
 }
 
-export function execute(sql: string, ...params: unknown[]): { lastInsertRowid: number | bigint } {
+export async function execute(sql: string, ...params: unknown[]): Promise<{ lastInsertRowid: number | bigint }> {
   if (USE_TURSO) {
-    throw new Error("Use executeAsync in Turso mode");
+    const client = await getTurso();
+    const result = await client.execute({ sql, args: params as never[] });
+    return { lastInsertRowid: result.lastInsertRowid ?? 0 };
   }
   return getSqlite().prepare(sql).run(...params);
 }
 
-// Async versions for Turso
-export async function queryOneAsync<T>(sql: string, ...params: unknown[]): Promise<T | undefined> {
-  if (!USE_TURSO) return queryOne<T>(sql, ...params);
-  const client = await getTurso();
-  const result = await client.execute({ sql, args: params as never[] });
-  return (result.rows[0] as T) ?? undefined;
-}
-
-export async function queryAllAsync<T>(sql: string, ...params: unknown[]): Promise<T[]> {
-  if (!USE_TURSO) return queryAll<T>(sql, ...params);
-  const client = await getTurso();
-  const result = await client.execute({ sql, args: params as never[] });
-  return result.rows as T[];
-}
-
-export async function executeAsync(sql: string, ...params: unknown[]): Promise<{ lastInsertRowid: number | bigint }> {
-  if (!USE_TURSO) return execute(sql, ...params);
-  const client = await getTurso();
-  const result = await client.execute({ sql, args: params as never[] });
-  return { lastInsertRowid: result.lastInsertRowid ?? 0 };
-}
-
-// For backwards compat — getDb still works in local dev
-export function getDb(): SqliteDb {
-  if (USE_TURSO) throw new Error("getDb() not available in Turso mode");
-  return getSqlite();
+// executeBatch — runs multiple statements in a transaction (works with both SQLite and Turso)
+export async function executeBatch(statements: Array<{ sql: string; params: unknown[] }>): Promise<void> {
+  if (USE_TURSO) {
+    const client = await getTurso();
+    await client.batch(statements.map((s) => ({ sql: s.sql, args: s.params as never[] })));
+    return;
+  }
+  const db = getSqlite();
+  db.exec("BEGIN");
+  try {
+    for (const stmt of statements) {
+      db.prepare(stmt.sql).run(...stmt.params);
+    }
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
 }

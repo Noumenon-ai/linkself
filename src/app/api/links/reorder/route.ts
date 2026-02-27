@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getRequestSession } from "@/lib/auth";
-import { getDb } from "@/lib/db";
+import { executeBatch } from "@/lib/db";
 import { linkReorderSchema } from "@/lib/validators";
 import { jsonOk, jsonError } from "@/lib/http";
 
@@ -20,17 +20,13 @@ export async function PUT(request: NextRequest) {
     return jsonError(parsed.error.issues[0]?.message ?? "Validation failed");
   }
 
-  const db = getDb();
-  const updateStmt = db.prepare("UPDATE links SET position = ? WHERE id = ? AND user_id = ?");
-
   try {
-    db.exec("BEGIN");
-    for (let i = 0; i < parsed.data.linkIds.length; i++) {
-      updateStmt.run(i, parsed.data.linkIds[i], session.userId);
-    }
-    db.exec("COMMIT");
+    const statements = parsed.data.linkIds.map((linkId, i) => ({
+      sql: "UPDATE links SET position = ? WHERE id = ? AND user_id = ?",
+      params: [i, linkId, session.userId] as unknown[],
+    }));
+    await executeBatch(statements);
   } catch {
-    db.exec("ROLLBACK");
     return jsonError("Failed to reorder links", 500);
   }
 

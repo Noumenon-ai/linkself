@@ -28,7 +28,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;
-  const user = queryOne<UserRow>("SELECT display_name, bio, avatar_url FROM users WHERE username = ?", username);
+  const user = await queryOne<UserRow>("SELECT display_name, bio, avatar_url FROM users WHERE username = ?", username);
 
   if (!user) return { title: "Not Found" };
 
@@ -55,11 +55,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProfilePage({ params }: Props) {
   const { username } = await params;
 
-  const user = queryOne<UserRow>("SELECT * FROM users WHERE username = ?", username);
+  const user = await queryOne<UserRow>("SELECT * FROM users WHERE username = ?", username);
   if (!user) notFound();
 
-  const links = queryAll<LinkRow>("SELECT * FROM links WHERE user_id = ? AND is_active = 1 ORDER BY position ASC", user.id);
-  const socialIcons = queryAll<SocialIconRow>("SELECT * FROM social_icons WHERE user_id = ? ORDER BY position ASC", user.id);
+  const links = await queryAll<LinkRow>("SELECT * FROM links WHERE user_id = ? AND is_active = 1 ORDER BY position ASC", user.id);
+  const socialIcons = await queryAll<SocialIconRow>("SELECT * FROM social_icons WHERE user_id = ? ORDER BY position ASC", user.id);
 
   const theme = getTheme(user.theme);
   const bgStyle = buildBackgroundStyle({

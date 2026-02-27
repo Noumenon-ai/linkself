@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
   const { username, email, password, displayName } = parsed.data;
 
-  const existingUser = queryOne<UserRow>("SELECT id FROM users WHERE email = ? OR username = ?", email, username);
+  const existingUser = await queryOne<UserRow>("SELECT id FROM users WHERE email = ? OR username = ?", email, username);
   if (existingUser) {
     return jsonError(
       { code: "ACCOUNT_CONFLICT", message: "Email or username already taken" },
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   const passwordHash = await bcrypt.hash(password, 12);
   const now = nowIso();
 
-  const result = execute(
+  const result = await execute(
     "INSERT INTO users (email, password_hash, username, display_name, bio, theme, plan, created_at, updated_at) VALUES (?, ?, ?, ?, '', 'default', 'free', ?, ?)",
     email, passwordHash, username, displayName, now, now
   );

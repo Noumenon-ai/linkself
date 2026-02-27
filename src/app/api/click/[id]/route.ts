@@ -10,7 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  const link = queryOne<LinkRow>("SELECT * FROM links WHERE id = ? AND is_active = 1", linkId);
+  const link = await queryOne<LinkRow>("SELECT * FROM links WHERE id = ? AND is_active = 1", linkId);
 
   if (!link) {
     return NextResponse.redirect(new URL("/", request.url));
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   // Increment click counter
-  execute("UPDATE links SET clicks = clicks + 1 WHERE id = ?", linkId);
+  await execute("UPDATE links SET clicks = clicks + 1 WHERE id = ?", linkId);
 
   // Log click details
   const referrer = request.headers.get("referer") ?? "";
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const device = parseDeviceType(userAgent);
   const country = request.headers.get("x-vercel-ip-country") ?? request.headers.get("cf-ipcountry") ?? "";
 
-  execute("INSERT INTO link_clicks (link_id, referrer, country, device, created_at) VALUES (?, ?, ?, ?, ?)",
+  await execute("INSERT INTO link_clicks (link_id, referrer, country, device, created_at) VALUES (?, ?, ?, ?, ?)",
     linkId, referrer, country, device, nowIso());
 
   return NextResponse.redirect(link.url, 302);
