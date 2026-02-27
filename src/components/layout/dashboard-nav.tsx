@@ -8,6 +8,7 @@ import {
   Link as LinkIcon,
   Palette,
   BarChart3,
+  QrCode,
   Settings,
   LogOut,
   ExternalLink,
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/dashboard/links", label: "Links", icon: LinkIcon },
   { href: "/dashboard/appearance", label: "Appearance", icon: Palette },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/qr", label: "QR Code", icon: QrCode },
 ];
 
 export function DashboardNav({ username }: { username?: string }) {

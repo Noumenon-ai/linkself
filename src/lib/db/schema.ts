@@ -56,6 +56,10 @@ export interface LinkRow {
   text_color: string;
   shape: string;
   nsfw: number;
+  link_type: string;
+  embed_url: string;
+  scheduled_start: string;
+  scheduled_end: string;
   created_at: string;
 }
 

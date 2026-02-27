@@ -1,19 +1,21 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Type, Minus, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LinkForm } from "@/components/dashboard/link-form";
+import { LinkForm, type LinkFormData } from "@/components/dashboard/link-form";
 import { LinkListItem } from "@/components/dashboard/link-list-item";
 import { SocialIconForm } from "@/components/dashboard/social-icon-form";
 import { apiFetch } from "@/lib/api-client";
 import type { LinkRow, SocialIconRow } from "@/lib/db/schema";
 import { Trash2 } from "lucide-react";
 
+type AddFormType = "link" | "header" | "divider" | "embed" | null;
+
 export default function LinksPage() {
   const [links, setLinks] = useState<LinkRow[]>([]);
   const [socialIcons, setSocialIcons] = useState<SocialIconRow[]>([]);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddForm, setShowAddForm] = useState<AddFormType>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -28,13 +30,13 @@ export default function LinksPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  async function handleAddLink(data: { title: string; url: string; icon: string }) {
+  async function handleAddLink(data: LinkFormData) {
     await apiFetch("/api/links", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    setShowAddForm(false);
+    setShowAddForm(null);
     fetchData();
   }
 
@@ -89,16 +91,31 @@ export default function LinksPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Links</h1>
-        <Button onClick={() => setShowAddForm(!showAddForm)}>
-          <Plus className="h-4 w-4" /> Add Link
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowAddForm(showAddForm === "link" ? null : "link")}>
+            <Plus className="h-4 w-4" /> Add Link
+          </Button>
+          <Button variant="secondary" onClick={() => setShowAddForm(showAddForm === "header" ? null : "header")}>
+            <Type className="h-4 w-4" /> Header
+          </Button>
+          <Button variant="secondary" onClick={() => setShowAddForm(showAddForm === "divider" ? null : "divider")}>
+            <Minus className="h-4 w-4" /> Divider
+          </Button>
+          <Button variant="secondary" onClick={() => setShowAddForm(showAddForm === "embed" ? null : "embed")}>
+            <Play className="h-4 w-4" /> Embed
+          </Button>
+        </div>
       </div>
 
       {showAddForm && (
         <div className="rounded-xl border border-slate-200 bg-white p-4 dark:bg-slate-800 dark:border-slate-700">
-          <LinkForm onSave={handleAddLink} onCancel={() => setShowAddForm(false)} />
+          <LinkForm
+            linkType={showAddForm}
+            onSave={handleAddLink}
+            onCancel={() => setShowAddForm(null)}
+          />
         </div>
       )}
 

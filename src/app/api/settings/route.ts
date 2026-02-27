@@ -87,7 +87,8 @@ export async function PATCH(request: NextRequest) {
   }
 
   // Boolean fields that need integer conversion for SQLite
-  const BOOLEAN_FIELDS = new Set(["nsfw", "tip_enabled", "hide_from_search"]);
+  // Note: nsfw is now an integer (0/1/2), not boolean, so it's excluded
+  const BOOLEAN_FIELDS = new Set(["tip_enabled", "hide_from_search"]);
 
   // Handle all other fields
   for (const field of UPDATABLE_FIELDS) {

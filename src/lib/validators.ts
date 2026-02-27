@@ -35,19 +35,23 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().trim().email("Invalid email address"),
+  email: z.string().trim().min(1, "Email or username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
 export const linkCreateSchema = z.object({
-  title: z.string().trim().min(1, "Title is required").max(100),
-  url: httpUrlSchema,
+  title: z.string().trim().max(100).optional().default(""),
+  url: httpUrlSchema.or(z.literal("")).optional().default(""),
   icon: z.string().max(50).optional().default(""),
   thumbnail_url: z.string().trim().max(2000).refine((v) => v === "" || (absoluteUrlSchema.safeParse(v).success && isHttpUrl(v)), "Invalid URL").optional().default(""),
   bg_color: z.string().trim().max(7).refine((v) => v === "" || HEX_COLOR_REGEX.test(v), "Invalid color").optional().default(""),
   text_color: z.string().trim().max(7).refine((v) => v === "" || HEX_COLOR_REGEX.test(v), "Invalid color").optional().default(""),
   shape: z.enum(["", "rounded", "pill", "square", "outline"]).optional().default(""),
   nsfw: z.boolean().optional().default(false),
+  scheduled_start: z.string().optional().or(z.literal("")),
+  scheduled_end: z.string().optional().or(z.literal("")),
+  link_type: z.enum(["link", "header", "divider", "embed"]).optional().default("link"),
+  embed_url: z.string().trim().max(2000).optional().default(""),
 });
 
 export const linkUpdateSchema = z.object({
@@ -61,6 +65,10 @@ export const linkUpdateSchema = z.object({
   text_color: z.string().trim().max(7).refine((v) => v === "" || HEX_COLOR_REGEX.test(v), "Invalid color").optional(),
   shape: z.enum(["", "rounded", "pill", "square", "outline"]).optional(),
   nsfw: z.boolean().optional(),
+  scheduled_start: z.string().optional().or(z.literal("")),
+  scheduled_end: z.string().optional().or(z.literal("")),
+  link_type: z.enum(["link", "header", "divider", "embed"]).optional(),
+  embed_url: z.string().trim().max(2000).optional(),
 });
 
 export const linkReorderSchema = z.object({
@@ -70,7 +78,10 @@ export const linkReorderSchema = z.object({
 export const settingsSchema = z.object({
   display_name: z.string().trim().min(1).max(80).optional(),
   bio: z.string().trim().max(280).optional(),
-  avatar_url: z.string().trim().url().max(2000).refine((v) => isHttpUrl(v), "URL must use http or https").optional().nullable(),
+  avatar_url: z.string().trim().max(3_000_000).refine(
+    (v) => v === "" || v.startsWith("data:image/") || (absoluteUrlSchema.safeParse(v).success && isHttpUrl(v)),
+    "Must be a valid image URL or data URL"
+  ).optional().nullable(),
   theme: z.string().max(50).optional(),
   custom_css: z.string().max(5000).optional(),
   bg_type: z.enum(["theme", "solid", "gradient", "image"]).optional(),
@@ -113,8 +124,8 @@ export const settingsSchema = z.object({
   layout: z.enum(["centered", "left", "card"]).optional(),
   avatar_shape: z.enum(["circle", "square", "rounded-square", "none"]).optional(),
   avatar_border: z.enum(["none", "thin", "ring", "glow"]).optional(),
-  // NSFW
-  nsfw: z.boolean().optional(),
+  // NSFW (0 = off, 1 = entire profile, 2 = individual links only)
+  nsfw: z.number().int().min(0).max(2).optional(),
   // Tip jar
   tip_enabled: z.boolean().optional(),
   tip_text: z.string().trim().max(100).optional(),

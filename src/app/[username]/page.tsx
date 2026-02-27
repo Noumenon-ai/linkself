@@ -20,6 +20,8 @@ import { Avatar } from "@/components/profile/avatar";
 import { SocialIconsRow } from "@/components/profile/social-icons-row";
 import { AgeGate } from "@/components/profile/age-gate";
 import { TipButton } from "@/components/profile/tip-button";
+import { NsfwLinkOverlay } from "@/components/profile/nsfw-link-overlay";
+import { EmbedRenderer } from "@/components/profile/embed-renderer";
 import type { UserRow, LinkRow, SocialIconRow } from "@/lib/db/schema";
 
 interface Props {
@@ -62,11 +64,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProfilePage({ params }: Props) {
   const { username } = await params;
 
-  const user = await queryOne<UserRow>("SELECT * FROM users WHERE username = ?", username);
-  if (!user) notFound();
+  const maybeUser = await queryOne<UserRow>("SELECT * FROM users WHERE username = ?", username);
+  if (!maybeUser) notFound();
+  const user = maybeUser;
 
-  const links = await queryAll<LinkRow>("SELECT * FROM links WHERE user_id = ? AND is_active = 1 ORDER BY position ASC", user.id);
+  const allLinks = await queryAll<LinkRow>("SELECT * FROM links WHERE user_id = ? AND is_active = 1 ORDER BY position ASC", user.id);
   const socialIcons = await queryAll<SocialIconRow>("SELECT * FROM social_icons WHERE user_id = ? ORDER BY position ASC", user.id);
+
+  // Filter out scheduled links that are not yet live or have expired
+  const now = new Date();
+  const links = allLinks.filter((link) => {
+    if (link.scheduled_start && link.scheduled_start.trim() !== "") {
+      if (new Date(link.scheduled_start) > now) return false;
+    }
+    if (link.scheduled_end && link.scheduled_end.trim() !== "") {
+      if (new Date(link.scheduled_end) < now) return false;
+    }
+    return true;
+  });
 
   const theme = getTheme(user.theme);
   const bgStyle = buildBackgroundStyle({
@@ -105,6 +120,9 @@ export default async function ProfilePage({ params }: Props) {
   // Text color override style
   const textStyle = textColor ? { color: textColor } : {};
 
+  // NSFW mode: 0 = off, 1 = entire profile, 2 = individual links only
+  const nsfwMode = Number(user.nsfw) || 0;
+
   // Animation
   const linkAnimation = user.link_animation || "fade-in";
   function getLinkAnimationClass(index: number): string {
@@ -123,6 +141,86 @@ export default async function ProfilePage({ params }: Props) {
   const socialIconsElement = (
     <SocialIconsRow icons={socialIcons} textClass={textColor ? "" : theme.textClass} className="social-row" style={textStyle} />
   );
+
+  function renderLink(link: LinkRow, index: number) {
+    const linkType = link.link_type || "link";
+
+    // Divider type
+    if (linkType === "divider") {
+      return (
+        <div key={link.id} className={`w-full py-2 ${getLinkAnimationClass(index)}`}>
+          <hr className={`border-t ${textColor ? "" : "border-current opacity-20"}`} style={textColor ? { borderColor: textColor, opacity: 0.2 } : {}} />
+        </div>
+      );
+    }
+
+    // Header type
+    if (linkType === "header") {
+      return (
+        <div key={link.id} className={`w-full py-1 ${getLinkAnimationClass(index)}`}>
+          <h2
+            className={`text-center font-bold text-lg ${textColor ? "" : theme.textClass}`}
+            style={textStyle}
+          >
+            {link.icon && <span className="mr-2">{link.icon}</span>}
+            {link.title}
+          </h2>
+        </div>
+      );
+    }
+
+    // Embed type
+    if (linkType === "embed") {
+      const embedContent = (
+        <div key={link.id} className={`w-full ${getLinkAnimationClass(index)}`}>
+          <div className={textColor ? "" : theme.textClass} style={textStyle}>
+            <EmbedRenderer title={link.title} embedUrl={link.embed_url || link.url} />
+          </div>
+        </div>
+      );
+
+      // Wrap in NSFW overlay if needed
+      if (nsfwMode === 2 && link.nsfw === 1) {
+        return <NsfwLinkOverlay key={link.id}>{embedContent}</NsfwLinkOverlay>;
+      }
+      return embedContent;
+    }
+
+    // Standard link type
+    const linkBtnStyle = link.bg_color || link.text_color
+      ? buildButtonStyle({ btn_color: link.bg_color || user.btn_color, btn_text_color: link.text_color || user.btn_text_color })
+      : defaultBtnStyle;
+    const linkShape = link.shape ? getBtnShapeClass(link.shape) : btnShape;
+    const animClass = getLinkAnimationClass(index);
+
+    const linkElement = (
+      <a
+        key={link.id}
+        href={`/api/click/${link.id}`}
+        className={`link-button block w-full px-5 py-3.5 text-center font-semibold transition-all duration-200 ${linkShape} ${btnHover} ${btnShadow} ${!link.bg_color && !user.btn_color ? theme.cardClass : ""} ${animClass}`}
+        style={linkBtnStyle}
+      >
+        <span className="flex items-center justify-center gap-3">
+          {link.thumbnail_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={link.thumbnail_url} alt="" className="h-8 w-8 rounded object-cover" />
+          )}
+          {link.icon && <span>{link.icon}</span>}
+          <span>{link.title}</span>
+          {link.nsfw === 1 && nsfwMode !== 2 && (
+            <span className="ml-1 inline-flex items-center rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-red-400">18+</span>
+          )}
+        </span>
+      </a>
+    );
+
+    // Wrap in NSFW overlay if individual link mode
+    if (nsfwMode === 2 && link.nsfw === 1) {
+      return <NsfwLinkOverlay key={link.id}>{linkElement}</NsfwLinkOverlay>;
+    }
+
+    return linkElement;
+  }
 
   const content = (
     <>
@@ -174,35 +272,7 @@ export default async function ProfilePage({ params }: Props) {
 
           {/* Links */}
           <div className="w-full space-y-3">
-            {links.map((link, index) => {
-              // Per-link overrides
-              const linkBtnStyle = link.bg_color || link.text_color
-                ? buildButtonStyle({ btn_color: link.bg_color || user.btn_color, btn_text_color: link.text_color || user.btn_text_color })
-                : defaultBtnStyle;
-              const linkShape = link.shape ? getBtnShapeClass(link.shape) : btnShape;
-              const animClass = getLinkAnimationClass(index);
-
-              return (
-                <a
-                  key={link.id}
-                  href={`/api/click/${link.id}`}
-                  className={`link-button block w-full px-5 py-3.5 text-center font-semibold transition-all duration-200 ${linkShape} ${btnHover} ${btnShadow} ${!link.bg_color && !user.btn_color ? theme.cardClass : ""} ${animClass}`}
-                  style={linkBtnStyle}
-                >
-                  <span className="flex items-center justify-center gap-3">
-                    {link.thumbnail_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={link.thumbnail_url} alt="" className="h-8 w-8 rounded object-cover" />
-                    )}
-                    {link.icon && <span>{link.icon}</span>}
-                    <span>{link.title}</span>
-                    {link.nsfw === 1 && (
-                      <span className="ml-1 inline-flex items-center rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-red-400">18+</span>
-                    )}
-                  </span>
-                </a>
-              );
-            })}
+            {links.map((link, index) => renderLink(link, index))}
           </div>
 
           {/* Social Icons (bottom position) */}
@@ -227,8 +297,10 @@ export default async function ProfilePage({ params }: Props) {
     </>
   );
 
-  if (user.nsfw) {
+  // NSFW mode 1: entire profile age gate
+  if (nsfwMode === 1) {
     return <AgeGate>{content}</AgeGate>;
   }
+  // NSFW mode 0 or 2: no page-level gate (mode 2 handles individual links inline)
   return content;
 }

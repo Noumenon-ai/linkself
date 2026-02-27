@@ -42,6 +42,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (updates.text_color !== undefined) { fields.push("text_color = ?"); values.push(updates.text_color); }
   if (updates.shape !== undefined) { fields.push("shape = ?"); values.push(updates.shape); }
   if (updates.nsfw !== undefined) { fields.push("nsfw = ?"); values.push(updates.nsfw ? 1 : 0); }
+  if (updates.scheduled_start !== undefined) { fields.push("scheduled_start = ?"); values.push(updates.scheduled_start); }
+  if (updates.scheduled_end !== undefined) { fields.push("scheduled_end = ?"); values.push(updates.scheduled_end); }
+  if (updates.link_type !== undefined) { fields.push("link_type = ?"); values.push(updates.link_type); }
+  if (updates.embed_url !== undefined) { fields.push("embed_url = ?"); values.push(updates.embed_url); }
 
   if (fields.length > 0) {
     values.push(linkId);

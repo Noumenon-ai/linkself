@@ -45,12 +45,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { email, password } = parsed.data;
+  const { email: identifier, password } = parsed.data;
 
-  const user = await queryOne<UserRow>("SELECT * FROM users WHERE email = ?", email);
+  const isEmail = identifier.includes("@");
+  const user = await queryOne<UserRow>(
+    isEmail
+      ? "SELECT * FROM users WHERE email = ?"
+      : "SELECT * FROM users WHERE username = ?",
+    identifier
+  );
   if (!user) {
     return jsonError(
-      { code: "INVALID_CREDENTIALS", message: "Invalid email or password" },
+      { code: "INVALID_CREDENTIALS", message: "Invalid email/username or password" },
       401,
       { meta: rateLimitMeta, headers }
     );
@@ -59,7 +65,7 @@ export async function POST(request: NextRequest) {
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
     return jsonError(
-      { code: "INVALID_CREDENTIALS", message: "Invalid email or password" },
+      { code: "INVALID_CREDENTIALS", message: "Invalid email/username or password" },
       401,
       { meta: rateLimitMeta, headers }
     );

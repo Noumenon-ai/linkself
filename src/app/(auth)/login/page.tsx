@@ -50,13 +50,13 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="mt-8 space-y-4">
         <Input
-          label="Email"
-          type="email"
+          label="Email or Username"
+          type="text"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
           autoFocus
-          placeholder="you@example.com"
+          placeholder="you@email.com or username"
         />
         <Input
           label="Password"

@@ -46,6 +46,10 @@ const LINK_COLUMN_MIGRATIONS: Array<{ name: string; definition: string }> = [
   { name: "text_color", definition: "text_color TEXT DEFAULT ''" },
   { name: "shape", definition: "shape TEXT DEFAULT ''" },
   { name: "nsfw", definition: "nsfw INTEGER NOT NULL DEFAULT 0" },
+  { name: "scheduled_start", definition: "scheduled_start TEXT DEFAULT ''" },
+  { name: "scheduled_end", definition: "scheduled_end TEXT DEFAULT ''" },
+  { name: "link_type", definition: "link_type TEXT NOT NULL DEFAULT 'link'" },
+  { name: "embed_url", definition: "embed_url TEXT DEFAULT ''" },
 ];
 
 // ===== TURSO (libSQL) adapter =====

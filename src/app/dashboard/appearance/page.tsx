@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Upload } from "lucide-react";
 import { ThemeCard } from "@/components/dashboard/theme-card";
 import { Avatar } from "@/components/profile/avatar";
 import { apiFetch } from "@/lib/api-client";
@@ -108,8 +109,8 @@ export default function AppearancePage() {
   const [avatarShape, setAvatarShape] = useState<AvatarShape>("circle");
   const [avatarBorder, setAvatarBorder] = useState<AvatarBorder>("none");
 
-  // NSFW
-  const [nsfw, setNsfw] = useState(false);
+  // NSFW (0 = off, 1 = entire profile, 2 = individual links only)
+  const [nsfw, setNsfw] = useState(0);
 
   // Tip Jar
   const [tipEnabled, setTipEnabled] = useState(false);
@@ -119,6 +120,10 @@ export default function AppearancePage() {
   // Animation & Social Position
   const [linkAnimation, setLinkAnimation] = useState("fade-in");
   const [socialPosition, setSocialPosition] = useState("top");
+
+  // Avatar upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   // UI state
   const [saving, setSaving] = useState(false);
@@ -155,7 +160,7 @@ export default function AppearancePage() {
         setLayoutMode((data.layout as LayoutMode) || "centered");
         setAvatarShape((data.avatar_shape as AvatarShape) || "circle");
         setAvatarBorder((data.avatar_border as AvatarBorder) || "none");
-        setNsfw(Boolean(data.nsfw));
+        setNsfw(Number(data.nsfw) || 0);
         setTipEnabled(Boolean(data.tip_enabled));
         setTipText(data.tip_text || "");
         setTipUrl(data.tip_url || "");
@@ -170,6 +175,27 @@ export default function AppearancePage() {
       });
     return () => { mounted = false; };
   }, []);
+
+  async function handleAvatarUpload(file: File) {
+    if (file.size > 2 * 1024 * 1024) { setError("File too large (max 2MB)"); return; }
+    if (!file.type.startsWith("image/")) { setError("Only images allowed"); return; }
+    setUploading(true); setError("");
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const res = await fetch("/api/upload/avatar", { method: "POST", body: formData });
+      const data = await res.json();
+      const isSuccess = data.status ? data.status === "success" : data.ok;
+      if (!res.ok || !isSuccess) {
+        const message = typeof data.error === "string" ? data.error : data.error?.message;
+        setError(message ?? "Upload failed");
+        return;
+      }
+      setAvatarUrl(data.data.avatar_url);
+    } catch {
+      setError("Upload failed");
+    } finally { setUploading(false); }
+  }
 
   async function handleSave() {
     setSaving(true); setSaved(false); setError("");
@@ -227,23 +253,62 @@ export default function AppearancePage() {
           <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={280} className={inputBase} placeholder="Tell the world about yourself..." />
           <p className="text-xs text-slate-500">{bio.length}/280</p>
         </div>
-        <Input label="Avatar URL" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..." />
+        {/* Avatar Upload */}
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Profile Photo</label>
+          <div className="flex items-center gap-4">
+            <div className="relative h-20 w-20 shrink-0">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="h-20 w-20 rounded-full object-cover border-2 border-slate-200 dark:border-slate-600" />
+              ) : (
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-xl font-bold text-white">
+                  {(displayName || "?")[0]?.toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); e.target.value = ""; }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                <Upload className="h-4 w-4" />
+                {uploading ? "Uploading..." : "Upload Photo"}
+              </button>
+              <p className="text-xs text-slate-500">PNG, JPG, GIF, or WebP. Max 2MB.</p>
+            </div>
+          </div>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700" /></div>
+            <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-slate-400 dark:bg-slate-800 dark:text-slate-500">or paste image URL</span></div>
+          </div>
+          <Input label="" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://example.com/avatar.jpg" />
+        </div>
         <div className="space-y-1.5">
           <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} />
           <p className="text-xs text-slate-500">Your link: linkself.com/{username}</p>
         </div>
-        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900 space-y-3">
           <div>
             <p className="text-sm font-medium text-slate-900 dark:text-white">18+ Content Warning</p>
-            <p className="text-xs text-slate-500">Visitors must confirm their age before viewing your page</p>
+            <p className="text-xs text-slate-500">Control how age-restricted content is handled on your profile</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setNsfw(!nsfw)}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${nsfw ? "bg-red-500" : "bg-slate-300 dark:bg-slate-600"}`}
-          >
-            <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${nsfw ? "translate-x-5" : "translate-x-0"}`} />
-          </button>
+          <SelectField label="NSFW Mode" value={String(nsfw)} onChange={(v) => setNsfw(Number(v))} options={[
+            { value: "0", label: "Off -- No age gate" },
+            { value: "1", label: "Entire Profile -- Age gate covers whole page" },
+            { value: "2", label: "Individual Links Only -- Warning on marked links" },
+          ]} />
+          {nsfw === 2 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">Links marked as 18+ will show a warning overlay. Mark individual links in the Links page.</p>
+          )}
         </div>
       </Section>
 
