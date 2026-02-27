@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 interface EmailCollectorBlockProps {
+  linkId: number;
   title: string;
   buttonText: string;
   placeholder: string;
@@ -10,22 +11,33 @@ interface EmailCollectorBlockProps {
   textStyle?: React.CSSProperties;
 }
 
-export function EmailCollectorBlock({ title, buttonText, placeholder, textClass, textStyle }: EmailCollectorBlockProps) {
+export function EmailCollectorBlock({ linkId, title, buttonText, placeholder, textClass, textStyle }: EmailCollectorBlockProps) {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
-    // Store in localStorage as a simple collection mechanism
+    setSubmitting(true);
+    setError("");
     try {
-      const existing = JSON.parse(localStorage.getItem("linkself_emails") || "[]") as string[];
-      existing.push(email);
-      localStorage.setItem("linkself_emails", JSON.stringify(existing));
+      const res = await fetch("/api/email-collect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ linkId, email: email.trim() }),
+      });
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } catch {
-      // Ignore storage errors
+      setError("Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitted(true);
   }
 
   if (submitted) {
@@ -53,12 +65,14 @@ export function EmailCollectorBlock({ title, buttonText, placeholder, textClass,
         />
         <button
           type="submit"
-          className="rounded-lg bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium hover:bg-white/30 transition-colors border border-current/20"
+          disabled={submitting}
+          className="rounded-lg bg-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium hover:bg-white/30 transition-colors border border-current/20 disabled:opacity-50"
           style={textStyle}
         >
-          {buttonText}
+          {submitting ? "..." : buttonText}
         </button>
       </form>
+      {error && <p className="text-xs text-red-400 text-center mt-2">{error}</p>}
     </div>
   );
 }

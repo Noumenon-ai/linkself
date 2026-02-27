@@ -31,7 +31,7 @@ interface JsonResponseOptions {
   headers?: HeadersInit;
 }
 
-const DEFAULT_CORS_ORIGIN = process.env.CORS_ALLOW_ORIGIN ?? "*";
+const DEFAULT_CORS_ORIGIN = process.env.CORS_ALLOW_ORIGIN ?? process.env.NEXT_PUBLIC_APP_URL ?? "*";
 
 const DEFAULT_ERROR_CODES: Record<number, string> = {
   400: "BAD_REQUEST",

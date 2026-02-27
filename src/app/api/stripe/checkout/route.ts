@@ -92,6 +92,12 @@ export async function POST(request: NextRequest) {
   return handleCheckout(request);
 }
 
+// GET is needed for the <a href> upgrade flow - redirects to Stripe
 export async function GET(request: NextRequest) {
+  // In production with Stripe configured, this redirects to Stripe checkout (safe)
+  // Without Stripe, prevent GET-based state changes in production
+  if (!process.env.STRIPE_SECRET_KEY && process.env.NODE_ENV === "production") {
+    return jsonError("Use POST to upgrade", 405);
+  }
   return handleCheckout(request);
 }

@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as {
       metadata?: { userId?: string; plan?: string };
+      subscription?: string;
     };
     const userId = session.metadata?.userId;
     const plan = session.metadata?.plan;
@@ -64,6 +65,16 @@ export async function POST(request: NextRequest) {
         plan,
         parseInt(userId)
       );
+      // Copy metadata to the subscription so cancellation webhook can find the user
+      if (session.subscription) {
+        try {
+          await stripeClient.subscriptions.update(session.subscription, {
+            metadata: { userId, plan },
+          });
+        } catch {
+          // Non-critical: subscription metadata update failed
+        }
+      }
     }
   }
 

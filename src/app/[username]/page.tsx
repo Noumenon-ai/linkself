@@ -226,6 +226,7 @@ export default async function ProfilePage({ params }: Props) {
       return (
         <div key={link.id} className={`w-full ${getLinkAnimationClass(index)}`}>
           <EmailCollectorBlock
+            linkId={link.id}
             title={link.title}
             buttonText={config.buttonText}
             placeholder={config.placeholder}
@@ -323,13 +324,14 @@ export default async function ProfilePage({ params }: Props) {
       return (
         <div key={link.id} className={`w-full ${getLinkAnimationClass(index)}`}>
           <p className={`text-sm font-medium mb-2 text-center ${textColor ? "" : theme.textClass}`} style={textStyle}>{link.title}</p>
-          {config.embedUrl ? (
+          {config.embedUrl && /^https:\/\/(www\.)?(google\.com\/maps|maps\.google)/.test(config.embedUrl) ? (
             <iframe
               src={config.embedUrl}
               className="w-full h-48 rounded-lg border-0"
               allowFullScreen
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
+              sandbox="allow-scripts"
               title={link.title || "Map"}
             />
           ) : config.address ? (
@@ -381,9 +383,10 @@ export default async function ProfilePage({ params }: Props) {
   }
 
   // Tracking IDs
-  const gaId = user.ga_measurement_id?.trim() || "";
-  const fbId = user.fb_pixel_id?.trim() || "";
-  const ttId = user.tiktok_pixel_id?.trim() || "";
+  // Sanitize tracking IDs to alphanumeric + hyphens only
+  const gaId = (user.ga_measurement_id?.trim() || "").replace(/[^a-zA-Z0-9-]/g, "");
+  const fbId = (user.fb_pixel_id?.trim() || "").replace(/[^a-zA-Z0-9]/g, "");
+  const ttId = (user.tiktok_pixel_id?.trim() || "").replace(/[^a-zA-Z0-9]/g, "");
 
   const content = (
     <>
@@ -492,7 +495,7 @@ export default async function ProfilePage({ params }: Props) {
   // Wrap in password gate if needed
   const pagePassword = user.page_password?.trim() || "";
   const gatedContent = pagePassword
-    ? <PasswordGate password={pagePassword}>{content}</PasswordGate>
+    ? <PasswordGate username={user.username}>{content}</PasswordGate>
     : content;
 
   // NSFW mode 1: entire profile age gate

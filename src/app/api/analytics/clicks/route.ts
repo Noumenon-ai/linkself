@@ -1,14 +1,25 @@
 import { NextRequest } from "next/server";
 import { getRequestSession } from "@/lib/auth";
-import { queryAll } from "@/lib/db";
+import { queryOne, queryAll } from "@/lib/db";
 import { jsonOk, jsonError } from "@/lib/http";
+import { getAnalyticsPeriods, isAdmin } from "@/lib/plans";
+import type { UserRow } from "@/lib/db/schema";
 
 export async function GET(request: NextRequest) {
   const session = await getRequestSession(request);
   if (!session) return jsonError("Not authenticated", 401);
 
+  // Enforce plan-based period limits
+  const currentUser = await queryOne<Pick<UserRow, "plan" | "username">>(
+    "SELECT plan, username FROM users WHERE id = ?",
+    session.userId
+  );
+  const effectivePlan = currentUser && isAdmin(currentUser.username) ? "business" : (currentUser?.plan || "free");
+  const allowedPeriods = getAnalyticsPeriods(effectivePlan);
+
   const url = new URL(request.url);
-  const period = url.searchParams.get("period") ?? "7d";
+  const requestedPeriod = url.searchParams.get("period") ?? "7d";
+  const period = allowedPeriods.includes(requestedPeriod) ? requestedPeriod : "7d";
   const days = period === "30d" ? 30 : period === "90d" ? 90 : 7;
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 

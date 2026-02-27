@@ -74,7 +74,7 @@ export function EmbedRenderer({ title, embedUrl }: EmbedRendererProps) {
         loading="lazy"
         className="w-full rounded-xl"
         style={{ border: 0, height: "315px" }}
-        sandbox="allow-scripts allow-same-origin"
+        sandbox="allow-scripts allow-popups"
       />
     </div>
   );

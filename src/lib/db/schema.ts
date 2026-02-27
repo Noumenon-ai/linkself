@@ -155,4 +155,17 @@ CREATE INDEX IF NOT EXISTS idx_link_clicks_link_id ON link_clicks(link_id);
 CREATE INDEX IF NOT EXISTS idx_link_clicks_created_at ON link_clicks(created_at);
 CREATE INDEX IF NOT EXISTS idx_social_icons_user_id ON social_icons(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
+CREATE TABLE IF NOT EXISTS email_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  link_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  email TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (link_id) REFERENCES links(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_subs_link_id ON email_subscriptions(link_id);
+CREATE INDEX IF NOT EXISTS idx_email_subs_user_id ON email_subscriptions(user_id);
 `;

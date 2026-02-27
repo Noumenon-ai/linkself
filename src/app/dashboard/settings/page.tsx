@@ -83,7 +83,7 @@ export default function SettingsPage() {
   const [tiktokPixelId, setTiktokPixelId] = useState("");
 
   // Privacy
-  const [nsfw, setNsfw] = useState(false);
+  const [nsfw, setNsfw] = useState(0);
   const [hideFromSearch, setHideFromSearch] = useState(false);
   const [pagePassword, setPagePassword] = useState("");
   const [passwordEnabled, setPasswordEnabled] = useState(false);
@@ -121,7 +121,7 @@ export default function SettingsPage() {
         setSeoTitle(data.seo_title || "");
         setSeoDescription(data.seo_description || "");
         setOgImageUrl(data.og_image_url || "");
-        setNsfw(Boolean(data.nsfw));
+        setNsfw(Number(data.nsfw) || 0);
         setHideFromSearch(Boolean(data.hide_from_search));
         setGaMeasurementId(data.ga_measurement_id || "");
         setFbPixelId(data.fb_pixel_id || "");
@@ -411,9 +411,9 @@ export default function SettingsPage() {
       <Section title="Privacy & Security">
         <Toggle
           label="18+ Content Warning (NSFW)"
-          description="Visitors must confirm their age before viewing your page"
-          checked={nsfw}
-          onChange={setNsfw}
+          description="Visitors must confirm their age before viewing your page. Use Appearance page for granular per-link control."
+          checked={nsfw > 0}
+          onChange={(v) => setNsfw(v ? 1 : 0)}
           color="red"
         />
         <Toggle

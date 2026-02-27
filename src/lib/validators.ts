@@ -63,7 +63,7 @@ export const linkCreateSchema = z.object({
 
 export const linkUpdateSchema = z.object({
   title: z.string().trim().min(1).max(100).optional(),
-  url: httpUrlSchema.optional(),
+  url: httpUrlSchema.or(z.literal("")).optional(),
   icon: z.string().max(50).optional(),
   is_active: z.boolean().optional(),
   position: z.number().int().min(0).optional(),

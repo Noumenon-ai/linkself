@@ -3,28 +3,26 @@
 import { useState, useEffect, type ReactNode } from "react";
 
 interface PasswordGateProps {
-  password: string;
+  username: string;
   children: ReactNode;
 }
 
-export function PasswordGate({ password, children }: PasswordGateProps) {
+export function PasswordGate({ username, children }: PasswordGateProps) {
   const [input, setInput] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Check sessionStorage on mount to see if already unlocked
   useEffect(() => {
     try {
-      const stored = sessionStorage.getItem("linkself_page_unlock");
-      if (stored === password) {
-        setUnlocked(true);
-      }
+      const stored = sessionStorage.getItem(`linkself_unlock_${username}`);
+      if (stored === "true") setUnlocked(true);
     } catch {
       // sessionStorage not available
     }
     setChecking(false);
-  }, [password]);
+  }, [username]);
 
   if (checking) {
     return (
@@ -36,19 +34,31 @@ export function PasswordGate({ password, children }: PasswordGateProps) {
 
   if (unlocked) return <>{children}</>;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (input === password) {
-      setUnlocked(true);
-      setError(false);
-      try {
-        sessionStorage.setItem("linkself_page_unlock", password);
-      } catch {
-        // sessionStorage not available
+    setSubmitting(true);
+    setError(false);
+    try {
+      const res = await fetch("/api/auth/verify-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password: input }),
+      });
+      if (res.ok) {
+        setUnlocked(true);
+        try {
+          sessionStorage.setItem(`linkself_unlock_${username}`, "true");
+        } catch {
+          // sessionStorage not available
+        }
+      } else {
+        setError(true);
+        setInput("");
       }
-    } else {
+    } catch {
       setError(true);
-      setInput("");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -86,10 +96,10 @@ export function PasswordGate({ password, children }: PasswordGateProps) {
 
           <button
             type="submit"
-            disabled={!input}
+            disabled={!input || submitting}
             className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Unlock
+            {submitting ? "Verifying..." : "Unlock"}
           </button>
         </form>
       </div>

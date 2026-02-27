@@ -3,6 +3,7 @@ import { getRequestSession } from "@/lib/auth";
 import { queryOne, execute } from "@/lib/db";
 import { linkUpdateSchema } from "@/lib/validators";
 import { jsonOk, jsonError } from "@/lib/http";
+import { canUseFeature, BLOCK_TYPE_FEATURE_MAP } from "@/lib/plans";
 import type { LinkRow } from "@/lib/db/schema";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -29,6 +30,34 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const updates = parsed.data;
+
+  // --- Plan enforcement ---
+  const currentUser = await queryOne<{ plan: string }>("SELECT plan FROM users WHERE id = ?", session.userId);
+  const userPlan = currentUser?.plan;
+
+  // Check block type permission
+  if (updates.link_type) {
+    const requiredFeature = BLOCK_TYPE_FEATURE_MAP[updates.link_type];
+    if (requiredFeature && !canUseFeature(userPlan, requiredFeature)) {
+      return jsonError(`${updates.link_type} blocks require a Pro plan.`, 403);
+    }
+  }
+
+  // Check pinned link permission
+  if (updates.is_pinned && !canUseFeature(userPlan, "pinnedLinks")) {
+    return jsonError("Pinned links require a Pro plan.", 403);
+  }
+
+  // Check scheduling permission
+  if ((updates.scheduled_start || updates.scheduled_end) && !canUseFeature(userPlan, "scheduling")) {
+    return jsonError("Link scheduling requires a Pro plan.", 403);
+  }
+
+  // Check UTM permission
+  if ((updates.utm_source || updates.utm_medium || updates.utm_campaign) && !canUseFeature(userPlan, "utmBuilder")) {
+    return jsonError("UTM parameters require a Pro plan.", 403);
+  }
+  // --- End plan enforcement ---
   const fields: string[] = [];
   const values: unknown[] = [];
 
