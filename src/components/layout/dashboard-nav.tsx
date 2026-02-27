@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Menu,
   X,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -25,7 +26,7 @@ const navItems = [
   { href: "/dashboard/qr", label: "QR Code", icon: QrCode },
 ];
 
-export function DashboardNav({ username }: { username?: string }) {
+export function DashboardNav({ username, plan }: { username?: string; plan?: string }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -48,9 +49,21 @@ export function DashboardNav({ username }: { username?: string }) {
             {username.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white truncate">
-              {username}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium text-white truncate">
+                {username}
+              </p>
+              {plan && (
+                <span className={cn(
+                  "inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0",
+                  plan === "business" ? "bg-amber-500/20 text-amber-300" :
+                  plan === "pro" ? "bg-indigo-500/20 text-indigo-300" :
+                  "bg-slate-500/20 text-slate-400"
+                )}>
+                  {plan}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 truncate">
               linkself.com/{username}
             </p>
@@ -95,6 +108,20 @@ export function DashboardNav({ username }: { username?: string }) {
             <ExternalLink className="h-[18px] w-[18px] flex-shrink-0" />
             View My Page
           </a>
+        </div>
+      )}
+
+      {/* Upgrade CTA for free users */}
+      {(!plan || plan === "free") && (
+        <div className="px-2 mt-4">
+          <Link
+            href="/pricing"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500/15 to-violet-500/15 border border-cyan-500/20 px-3 py-2.5 text-sm font-medium text-cyan-300 hover:from-cyan-500/25 hover:to-violet-500/25 transition-all duration-200"
+          >
+            <Sparkles className="h-4 w-4 text-cyan-400 shrink-0" />
+            Upgrade Plan
+          </Link>
         </div>
       )}
 

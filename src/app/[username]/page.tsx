@@ -3,6 +3,7 @@ import Script from "next/script";
 import type { Metadata } from "next";
 import { queryOne, queryAll } from "@/lib/db";
 import { getTheme } from "@/lib/themes";
+import { canUseFeature, isAdmin } from "@/lib/plans";
 import {
   buildBackgroundStyle,
   buildButtonStyle,
@@ -141,8 +142,9 @@ export default async function ProfilePage({ params }: Props) {
   const avatarBorder = getAvatarBorderClass(user.avatar_border);
   const hideAvatar = user.avatar_shape === "none";
 
-  // Branding
-  const hideBranding = user.plan === "business";
+  // Branding - Pro and Business can remove branding
+  const effectivePlan = isAdmin(user.username) ? "business" : (user.plan || "free");
+  const hideBranding = canUseFeature(effectivePlan, "removeBranding");
 
   // Text color override style
   const textStyle = textColor ? { color: textColor } : {};
@@ -479,7 +481,7 @@ export default async function ProfilePage({ params }: Props) {
               href="/"
               className={`powered-by mt-8 text-xs ${theme.footerClass} hover:opacity-80 transition-opacity`}
             >
-              {user.display_name} on LinkSelf
+              {user.username} on LinkSelf
             </a>
           )}
         </div>

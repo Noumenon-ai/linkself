@@ -3,11 +3,12 @@
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload } from "lucide-react";
+import { Upload, Lock } from "lucide-react";
 import { ThemeCard } from "@/components/dashboard/theme-card";
 import { Avatar } from "@/components/profile/avatar";
 import { apiFetch } from "@/lib/api-client";
 import { themeList, getTheme } from "@/lib/themes";
+import { getPlan, isThemeAvailable, canUseFeature, type PlanConfig } from "@/lib/plans";
 import {
   buildBackgroundStyle,
   buildButtonStyle,
@@ -67,11 +68,35 @@ function SelectField({ label, value, onChange, options }: { label: string; value
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, badge, children }: { title: string; badge?: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 dark:bg-slate-800 dark:border-slate-700 space-y-4">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
+        {badge && (
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+            badge === "Business"
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+              : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+          }`}>
+            <Lock className="h-2.5 w-2.5" /> {badge}
+          </span>
+        )}
+      </div>
       {children}
+    </div>
+  );
+}
+
+function LockedOverlay({ planName = "Pro" }: { planName?: string }) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/60 dark:bg-slate-800/60 backdrop-blur-[2px]">
+      <a
+        href="/pricing"
+        className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2 text-sm font-medium text-white shadow-lg hover:from-indigo-600 hover:to-purple-700 transition-all"
+      >
+        <Lock className="h-3.5 w-3.5" /> Upgrade to {planName}
+      </a>
     </div>
   );
 }
@@ -126,6 +151,10 @@ export default function AppearancePage() {
   const [linkAnimation, setLinkAnimation] = useState("fade-in");
   const [socialPosition, setSocialPosition] = useState("top");
 
+  // Plan state
+  const [userPlan, setUserPlan] = useState<string>("free");
+  const [planConfig, setPlanConfig] = useState<PlanConfig | null>(null);
+
   // Avatar upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -173,6 +202,10 @@ export default function AppearancePage() {
         setTipUrl(data.tip_url || "");
         setLinkAnimation(data.link_animation || "fade-in");
         setSocialPosition(data.social_position || "top");
+        // Load plan config
+        const planId = data.plan || "free";
+        setUserPlan(planId);
+        setPlanConfig(getPlan(planId));
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -323,19 +356,48 @@ export default function AppearancePage() {
       {/* Theme */}
       <Section title="Theme">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {themeList.map((t) => <ThemeCard key={t.id} theme={t} selected={selectedTheme === t.id} onClick={() => setSelectedTheme(t.id)} />)}
+          {themeList.map((t) => {
+            const available = isThemeAvailable(userPlan, t.id);
+            return (
+              <div key={t.id} className="relative">
+                <ThemeCard
+                  theme={t}
+                  selected={selectedTheme === t.id}
+                  onClick={() => { if (available) setSelectedTheme(t.id); }}
+                />
+                {!available && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-[1px] cursor-not-allowed">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/60 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+                      <Lock className="h-2.5 w-2.5" /> PRO
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
+        {planConfig && planConfig.themes === "basic" && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+            Free plan includes 5 themes.{" "}
+            <a href="/pricing" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">Upgrade to Pro</a> for all {themeList.length} themes.
+          </p>
+        )}
       </Section>
 
       {/* Background */}
       <Section title="Background">
-        <SelectField label="Background Type" value={bgType} onChange={(v) => setBgType(v as BackgroundType)} options={[
+        <SelectField label="Background Type" value={bgType} onChange={(v) => {
+          const val = v as BackgroundType;
+          if (val === "video" && !canUseFeature(userPlan, "videoBackground")) return;
+          if (val === "pattern" && !canUseFeature(userPlan, "patternBackground")) return;
+          setBgType(val);
+        }} options={[
           { value: "theme", label: "Use Theme Background" },
           { value: "solid", label: "Solid Color" },
           { value: "gradient", label: "Gradient" },
           { value: "image", label: "Image URL" },
-          { value: "video", label: "Video URL" },
-          { value: "pattern", label: "Pattern" },
+          { value: "video", label: canUseFeature(userPlan, "videoBackground") ? "Video URL" : "Video URL (Pro)" },
+          { value: "pattern", label: canUseFeature(userPlan, "patternBackground") ? "Pattern" : "Pattern (Pro)" },
         ]} />
         {bgType === "solid" && <ColorPicker label="Background Color" value={bgColor} onChange={setBgColor} />}
         {bgType === "gradient" && (
@@ -450,15 +512,18 @@ export default function AppearancePage() {
       </Section>
 
       {/* Animation */}
-      <Section title="Link Animation">
-        <p className="text-sm text-slate-500 dark:text-slate-400">Choose how your links animate when visitors load your profile page.</p>
-        <SelectField label="Entrance Animation" value={linkAnimation} onChange={setLinkAnimation} options={[
-          { value: "none", label: "None" },
-          { value: "fade-in", label: "Fade In" },
-          { value: "slide-up", label: "Slide Up" },
-          { value: "bounce", label: "Bounce" },
-          { value: "stagger", label: "Stagger (one by one)" },
-        ]} />
+      <Section title="Link Animation" badge={canUseFeature(userPlan, "linkAnimations") ? undefined : "Pro"}>
+        <div className="relative">
+          {!canUseFeature(userPlan, "linkAnimations") && <LockedOverlay />}
+          <p className="text-sm text-slate-500 dark:text-slate-400">Choose how your links animate when visitors load your profile page.</p>
+          <SelectField label="Entrance Animation" value={linkAnimation} onChange={setLinkAnimation} options={[
+            { value: "none", label: "None" },
+            { value: "fade-in", label: "Fade In" },
+            { value: "slide-up", label: "Slide Up" },
+            { value: "bounce", label: "Bounce" },
+            { value: "stagger", label: "Stagger (one by one)" },
+          ]} />
+        </div>
       </Section>
 
       {/* Social Icons Position */}
@@ -495,17 +560,20 @@ export default function AppearancePage() {
       </Section>
 
       {/* Custom CSS */}
-      <Section title="Custom CSS">
-        <div className="space-y-1.5">
-          <textarea value={customCss} onChange={(e) => setCustomCss(e.target.value)} rows={10} maxLength={5000} spellCheck={false} className="block w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-3 font-mono text-xs leading-5 text-emerald-100 placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30 focus:outline-none" placeholder={".profile-page {\n  border-radius: 24px;\n}\n.link-button {\n  text-transform: uppercase;\n}"} />
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>{customCss.length}/5000</span>
-            <Button type="button" variant="secondary" onClick={() => setPreviewCss(sanitizeCustomCss(customCss))}>Preview CSS</Button>
+      <Section title="Custom CSS" badge={canUseFeature(userPlan, "customCss") ? undefined : "Pro"}>
+        <div className="relative">
+          {!canUseFeature(userPlan, "customCss") && <LockedOverlay />}
+          <div className="space-y-1.5">
+            <textarea value={customCss} onChange={(e) => setCustomCss(e.target.value)} rows={10} maxLength={5000} spellCheck={false} className="block w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-3 font-mono text-xs leading-5 text-emerald-100 placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30 focus:outline-none" placeholder={".profile-page {\n  border-radius: 24px;\n}\n.link-button {\n  text-transform: uppercase;\n}"} />
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>{customCss.length}/5000</span>
+              <Button type="button" variant="secondary" onClick={() => setPreviewCss(sanitizeCustomCss(customCss))}>Preview CSS</Button>
+            </div>
           </div>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
-          <p className="text-xs font-medium text-slate-700 dark:text-slate-200">Available selectors</p>
-          <pre className="mt-2 overflow-x-auto whitespace-pre text-xs text-slate-600 dark:text-slate-300">{".profile-page\n.profile-avatar\n.profile-name\n.profile-bio\n.link-button\n.social-row\n.powered-by"}</pre>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-200">Available selectors</p>
+            <pre className="mt-2 overflow-x-auto whitespace-pre text-xs text-slate-600 dark:text-slate-300">{".profile-page\n.profile-avatar\n.profile-name\n.profile-bio\n.link-button\n.social-row\n.powered-by"}</pre>
+          </div>
         </div>
       </Section>
 

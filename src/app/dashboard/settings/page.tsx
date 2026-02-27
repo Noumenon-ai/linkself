@@ -4,20 +4,33 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import { Lock } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
+import { canUseFeature } from "@/lib/plans";
 
 const inputBase =
   "block w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none dark:bg-slate-800 dark:border-slate-600 dark:text-white";
 
-function Section({ title, children, variant }: { title: string; children: React.ReactNode; variant?: "danger" }) {
+function Section({ title, children, variant, badge }: { title: string; children: React.ReactNode; variant?: "danger"; badge?: string }) {
   const borderClass = variant === "danger"
     ? "border-red-200 dark:border-red-900/50"
     : "border-slate-200 dark:border-slate-700";
   return (
     <div className={`rounded-xl border bg-white p-6 dark:bg-slate-800 space-y-4 ${borderClass}`}>
-      <h2 className={`text-lg font-semibold ${variant === "danger" ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-white"}`}>
-        {title}
-      </h2>
+      <div className="flex items-center gap-2">
+        <h2 className={`text-lg font-semibold ${variant === "danger" ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-white"}`}>
+          {title}
+        </h2>
+        {badge && (
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+            badge === "Business"
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+              : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+          }`}>
+            <Lock className="h-2.5 w-2.5" /> {badge}
+          </span>
+        )}
+      </div>
       {children}
     </div>
   );
@@ -75,6 +88,10 @@ export default function SettingsPage() {
   const [pagePassword, setPagePassword] = useState("");
   const [passwordEnabled, setPasswordEnabled] = useState(false);
 
+  // Plan
+  const [plan, setPlan] = useState("free");
+  const [upgradeSuccess, setUpgradeSuccess] = useState("");
+
   // UI state
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -84,6 +101,15 @@ export default function SettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   useEffect(() => {
+    // Detect upgrade success from URL
+    const params = new URLSearchParams(window.location.search);
+    const upgraded = params.get("upgraded");
+    if (upgraded) {
+      setUpgradeSuccess(upgraded);
+      // Clean URL without reload
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
     let mounted = true;
     apiFetch<Record<string, string | null>>("/api/settings")
       .then((data) => {
@@ -102,6 +128,7 @@ export default function SettingsPage() {
         setTiktokPixelId(data.tiktok_pixel_id || "");
         setPagePassword(data.page_password || "");
         setPasswordEnabled(Boolean(data.page_password));
+        setPlan(data.plan || "free");
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -167,6 +194,84 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Upgrade Success Banner */}
+      {upgradeSuccess && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300 flex items-center justify-between">
+          <span>
+            Successfully upgraded to <span className="font-semibold capitalize">{upgradeSuccess}</span>! Enjoy your new features.
+          </span>
+          <button onClick={() => setUpgradeSuccess("")} className="text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
+
+      {/* Plan & Billing Section */}
+      <Section title="Plan & Billing">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-sm text-slate-600 dark:text-slate-400">Current Plan:</span>
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+            plan === "business" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" :
+            plan === "pro" ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" :
+            "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+          }`}>
+            {plan}
+          </span>
+          {plan === "pro" && (
+            <span className="text-sm text-slate-500 dark:text-slate-400">($9/mo)</span>
+          )}
+          {plan === "business" && (
+            <span className="text-sm text-slate-500 dark:text-slate-400">($29/mo)</span>
+          )}
+        </div>
+
+        {plan === "free" && (
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <a
+              href="/api/stripe/checkout?plan=pro"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              Upgrade to Pro - $9/mo
+            </a>
+            <a
+              href="/api/stripe/checkout?plan=business"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 transition-colors shadow-sm"
+            >
+              Upgrade to Business - $29/mo
+            </a>
+          </div>
+        )}
+
+        {plan === "pro" && (
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <a
+              href="/api/stripe/checkout?plan=business"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 transition-colors shadow-sm"
+            >
+              Upgrade to Business - $29/mo
+            </a>
+          </div>
+        )}
+
+        {plan !== "free" && (
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            Manage your subscription and billing details through the Stripe customer portal.
+            <a href="#" className="ml-1 text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+              Manage Subscription
+            </a>
+          </p>
+        )}
+
+        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+          <a
+            href="/pricing"
+            className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors"
+          >
+            Compare all plans &rarr;
+          </a>
+        </div>
+      </Section>
+
       {/* Account Section */}
       <Section title="Account">
         <div className="space-y-1.5">
@@ -207,7 +312,15 @@ export default function SettingsPage() {
       </Section>
 
       {/* SEO & Meta Section */}
-      <Section title="SEO & Meta">
+      <Section title="SEO & Meta" badge={canUseFeature(plan, "seoControls") ? undefined : "Pro"}>
+        {!canUseFeature(plan, "seoControls") && (
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-800 p-3 text-center">
+            <p className="text-sm text-indigo-700 dark:text-indigo-300">
+              SEO controls require a Pro plan.{" "}
+              <a href="/pricing" className="font-semibold underline hover:no-underline">Upgrade</a>
+            </p>
+          </div>
+        )}
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Customize how your page appears in search engines and social media shares.
         </p>
@@ -253,31 +366,45 @@ export default function SettingsPage() {
       </Section>
 
       {/* Tracking & Analytics Section */}
-      <Section title="Tracking & Analytics">
+      <Section title="Tracking & Analytics" badge={canUseFeature(plan, "gaPixel") ? undefined : "Business"}>
+        {!canUseFeature(plan, "gaPixel") && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3 text-center">
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              Tracking pixels require a Business plan.{" "}
+              <a href="/pricing" className="font-semibold underline hover:no-underline">Upgrade</a>
+            </p>
+          </div>
+        )}
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Add tracking pixels to measure traffic on your profile page. Paste your IDs below and they will be automatically injected into your public page.
         </p>
-        <Input
-          label="Google Analytics Measurement ID"
-          value={gaMeasurementId}
-          onChange={(e) => setGaMeasurementId(e.target.value.trim())}
-          placeholder="G-XXXXXXXXXX"
-          hint="Find this in Google Analytics > Admin > Data Streams. Tracks page views, traffic sources, and visitor behavior."
-        />
-        <Input
-          label="Facebook Pixel ID"
-          value={fbPixelId}
-          onChange={(e) => setFbPixelId(e.target.value.trim())}
-          placeholder="1234567890"
-          hint="Find this in Meta Events Manager > Pixels. Enables retargeting and conversion tracking for Facebook & Instagram ads."
-        />
-        <Input
-          label="TikTok Pixel ID"
-          value={tiktokPixelId}
-          onChange={(e) => setTiktokPixelId(e.target.value.trim())}
-          placeholder="XXXXXXXXX"
-          hint="Find this in TikTok Ads Manager > Events. Tracks conversions from TikTok ad campaigns."
-        />
+        <div className={!canUseFeature(plan, "gaPixel") ? "opacity-50 pointer-events-none" : ""}>
+          <Input
+            label="Google Analytics Measurement ID"
+            value={gaMeasurementId}
+            onChange={(e) => setGaMeasurementId(e.target.value.trim())}
+            placeholder="G-XXXXXXXXXX"
+            hint="Find this in Google Analytics > Admin > Data Streams. Tracks page views, traffic sources, and visitor behavior."
+          />
+        </div>
+        <div className={!canUseFeature(plan, "fbPixel") ? "opacity-50 pointer-events-none" : ""}>
+          <Input
+            label="Facebook Pixel ID"
+            value={fbPixelId}
+            onChange={(e) => setFbPixelId(e.target.value.trim())}
+            placeholder="1234567890"
+            hint="Find this in Meta Events Manager > Pixels. Enables retargeting and conversion tracking for Facebook & Instagram ads."
+          />
+        </div>
+        <div className={!canUseFeature(plan, "tiktokPixel") ? "opacity-50 pointer-events-none" : ""}>
+          <Input
+            label="TikTok Pixel ID"
+            value={tiktokPixelId}
+            onChange={(e) => setTiktokPixelId(e.target.value.trim())}
+            placeholder="XXXXXXXXX"
+            hint="Find this in TikTok Ads Manager > Events. Tracks conversions from TikTok ad campaigns."
+          />
+        </div>
       </Section>
 
       {/* Privacy & Security Section */}
@@ -295,16 +422,26 @@ export default function SettingsPage() {
           checked={hideFromSearch}
           onChange={setHideFromSearch}
         />
-        <Toggle
-          label="Password-Protect Page"
-          description="Visitors must enter a password to view your profile page"
-          checked={passwordEnabled}
-          onChange={(v) => {
-            setPasswordEnabled(v);
-            if (!v) setPagePassword("");
-          }}
-          color="amber"
-        />
+        <div className="relative">
+          {!canUseFeature(plan, "passwordProtection") && (
+            <div className="absolute top-2 right-2 z-10">
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                <Lock className="h-2.5 w-2.5" /> Business
+              </span>
+            </div>
+          )}
+          <Toggle
+            label="Password-Protect Page"
+            description={canUseFeature(plan, "passwordProtection") ? "Visitors must enter a password to view your profile page" : "Requires Business plan - visitors must enter a password to view your page"}
+            checked={passwordEnabled}
+            onChange={(v) => {
+              if (!canUseFeature(plan, "passwordProtection")) return;
+              setPasswordEnabled(v);
+              if (!v) setPagePassword("");
+            }}
+            color="amber"
+          />
+        </div>
         {passwordEnabled && (
           <div className="ml-4 pl-4 border-l-2 border-amber-300 dark:border-amber-700">
             <Input

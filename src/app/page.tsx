@@ -162,6 +162,12 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link
+              href="/pricing"
+              className="hidden sm:inline-flex text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors px-3 py-2"
+            >
+              Pricing
+            </Link>
+            <Link
               href="/login"
               className="hidden sm:inline-flex text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors px-3 py-2"
             >
@@ -308,6 +314,16 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
+
+            <div className="text-center mt-12">
+              <Link
+                href="/pricing"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+              >
+                See Pricing & Plans
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -448,6 +464,7 @@ export default function LandingPage() {
 
             <div className="flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400">
               <Link href="#features" className="hover:text-slate-900 dark:hover:text-white transition-colors">Features</Link>
+              <Link href="/pricing" className="hover:text-slate-900 dark:hover:text-white transition-colors">Pricing</Link>
               <Link href="#examples" className="hover:text-slate-900 dark:hover:text-white transition-colors">Examples</Link>
               <Link href="/login" className="hover:text-slate-900 dark:hover:text-white transition-colors">Login</Link>
             </div>

@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Lock } from "lucide-react";
 import { AnalyticsChart } from "@/components/dashboard/analytics-chart";
 import { apiFetch } from "@/lib/api-client";
 import { formatNumber } from "@/lib/utils";
+import { getAnalyticsPeriods } from "@/lib/plans";
 
 interface ClickData {
   days: { date: string; clicks: number }[];
@@ -46,6 +48,19 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<ClickData | null>(null);
   const [period, setPeriod] = useState("7d");
   const [loading, setLoading] = useState(true);
+  const [userPlan, setUserPlan] = useState<string>("free");
+  const [allowedPeriods, setAllowedPeriods] = useState<string[]>(["7d"]);
+
+  // Load plan info
+  useEffect(() => {
+    apiFetch<Record<string, string | null>>("/api/settings")
+      .then((settings) => {
+        const planId = settings.plan || "free";
+        setUserPlan(planId);
+        setAllowedPeriods(getAnalyticsPeriods(planId));
+      })
+      .catch(() => { /* use defaults */ });
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -85,19 +100,28 @@ export default function AnalyticsPage() {
         </div>
         {/* Pill tab selector */}
         <div className="flex rounded-full bg-slate-100 dark:bg-slate-700/50 p-1 gap-0.5">
-          {PERIODS.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => setPeriod(p.key)}
-              className={`px-5 py-2 text-sm font-semibold rounded-full transition-all duration-200 ${
-                period === p.key
-                  ? "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-black/5 dark:ring-white/5"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+          {PERIODS.map((p) => {
+            const isAllowed = allowedPeriods.includes(p.key);
+            const requiredPlan = p.key === "90d" ? "Business" : p.key === "30d" ? "Pro" : null;
+            return (
+              <button
+                key={p.key}
+                onClick={() => { if (isAllowed) setPeriod(p.key); }}
+                disabled={!isAllowed}
+                title={!isAllowed && requiredPlan ? `Requires ${requiredPlan} plan` : undefined}
+                className={`px-5 py-2 text-sm font-semibold rounded-full transition-all duration-200 flex items-center gap-1.5 ${
+                  !isAllowed
+                    ? "text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                    : period === p.key
+                      ? "bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-black/5 dark:ring-white/5"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                }`}
+              >
+                {p.label}
+                {!isAllowed && <Lock className="h-3 w-3" />}
+              </button>
+            );
+          })}
         </div>
       </div>
 

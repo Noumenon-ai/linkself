@@ -3,6 +3,7 @@ import { getRequestSession } from "@/lib/auth";
 import { queryOne, queryAll, execute } from "@/lib/db";
 import { socialIconSchema } from "@/lib/validators";
 import { getPaginationParams, jsonOk, jsonError, paginationMeta } from "@/lib/http";
+import { getPlan, isWithinSocialIconLimit } from "@/lib/plans";
 import type { SocialIconRow } from "@/lib/db/schema";
 
 export async function GET(request: NextRequest) {
@@ -45,6 +46,15 @@ export async function POST(request: NextRequest) {
   }
 
   const { platform, url } = parsed.data;
+
+  // --- Plan enforcement: social icon limit ---
+  const currentUser = await queryOne<{ plan: string }>("SELECT plan FROM users WHERE id = ?", session.userId);
+  const plan = getPlan(currentUser?.plan);
+  const iconCount = await queryOne<{ count: number }>("SELECT COUNT(*) as count FROM social_icons WHERE user_id = ?", session.userId);
+  if (!isWithinSocialIconLimit(currentUser?.plan, iconCount?.count ?? 0)) {
+    return jsonError(`Free plan allows ${plan.maxSocialIcons} social icons. Upgrade to Pro for unlimited.`, 403);
+  }
+  // --- End plan enforcement ---
 
   const last = await queryOne<{ maxPos: number | null }>("SELECT MAX(position) as maxPos FROM social_icons WHERE user_id = ?", session.userId);
   const position = (last?.maxPos ?? -1) + 1;

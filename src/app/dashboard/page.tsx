@@ -5,6 +5,49 @@ import { StatsCard } from "@/components/ui/stats-card";
 import { apiFetch } from "@/lib/api-client";
 import { formatNumber } from "@/lib/utils";
 
+function UpgradeBanner() {
+  const [plan, setPlan] = useState<string>("free");
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    apiFetch<{ plan?: string }>("/api/settings")
+      .then((data) => {
+        if (data.plan) setPlan(data.plan as string);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (plan !== "free" || dismissed) return null;
+
+  return (
+    <div className="relative rounded-xl border border-indigo-200 dark:border-indigo-800/40 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/20 px-5 py-3.5 flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="text-lg shrink-0">{"\u26A1"}</span>
+        <p className="text-sm text-slate-700 dark:text-slate-300">
+          You&apos;re on the <span className="font-semibold">Free plan</span> &mdash; Upgrade to Pro for unlimited links and all features
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <a
+          href="/pricing"
+          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+        >
+          See Plans &rarr;
+        </a>
+        <button
+          onClick={() => setDismissed(true)}
+          className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-white/5 transition-colors"
+          aria-label="Dismiss"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface RecentClick {
   link_title: string;
   referrer: string;
@@ -113,6 +156,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Upgrade Banner for Free Users */}
+      <UpgradeBanner />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

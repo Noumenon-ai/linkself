@@ -6,6 +6,7 @@ import { setAuthCookie } from "@/lib/auth";
 import { jsonOk, jsonError } from "@/lib/http";
 import { nowIso } from "@/lib/utils";
 import { checkRateLimit, getRequestIp, rateLimitHeaders } from "@/lib/rate-limit";
+import { isAdmin } from "@/lib/plans";
 import type { UserRow } from "@/lib/db/schema";
 
 export async function POST(request: NextRequest) {
@@ -59,10 +60,11 @@ export async function POST(request: NextRequest) {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const now = nowIso();
+  const defaultPlan = isAdmin(username) ? "business" : "free";
 
   const result = await execute(
-    "INSERT INTO users (email, password_hash, username, display_name, bio, theme, plan, created_at, updated_at) VALUES (?, ?, ?, ?, '', 'default', 'free', ?, ?)",
-    email, passwordHash, username, displayName, now, now
+    "INSERT INTO users (email, password_hash, username, display_name, bio, theme, plan, created_at, updated_at) VALUES (?, ?, ?, ?, '', 'default', ?, ?, ?)",
+    email, passwordHash, username, displayName, defaultPlan, now, now
   );
 
   const userId = Number(result.lastInsertRowid);
