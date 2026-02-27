@@ -18,6 +18,8 @@ import {
 } from "@/lib/profile-customization";
 import { Avatar } from "@/components/profile/avatar";
 import { SocialIconsRow } from "@/components/profile/social-icons-row";
+import { AgeGate } from "@/components/profile/age-gate";
+import { TipButton } from "@/components/profile/tip-button";
 import type { UserRow, LinkRow, SocialIconRow } from "@/lib/db/schema";
 
 interface Props {
@@ -96,7 +98,7 @@ export default async function ProfilePage({ params }: Props) {
   // Text color override style
   const textStyle = textColor ? { color: textColor } : {};
 
-  return (
+  const content = (
     <>
       {/* Google Font */}
       {fontFamily !== "Inter" && (
@@ -167,11 +169,19 @@ export default async function ProfilePage({ params }: Props) {
                     )}
                     {link.icon && <span>{link.icon}</span>}
                     <span>{link.title}</span>
+                    {link.nsfw === 1 && (
+                      <span className="ml-1 inline-flex items-center rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-red-400">18+</span>
+                    )}
                   </span>
                 </a>
               );
             })}
           </div>
+
+          {/* Tip/Donation */}
+          {user.tip_enabled && user.tip_url && (
+            <TipButton text={user.tip_text || "Buy me a coffee \u2615"} url={user.tip_url} />
+          )}
 
           {/* Footer */}
           {!hideBranding && (
@@ -186,4 +196,9 @@ export default async function ProfilePage({ params }: Props) {
       </main>
     </>
   );
+
+  if (user.nsfw) {
+    return <AgeGate>{content}</AgeGate>;
+  }
+  return content;
 }

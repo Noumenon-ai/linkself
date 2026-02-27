@@ -25,6 +25,10 @@ export interface UserRow {
   layout: string;
   avatar_shape: string;
   avatar_border: string;
+  nsfw: number;
+  tip_enabled: number;
+  tip_text: string;
+  tip_url: string;
   plan: string;
   created_at: string;
   updated_at: string;
@@ -43,6 +47,7 @@ export interface LinkRow {
   bg_color: string;
   text_color: string;
   shape: string;
+  nsfw: number;
   created_at: string;
 }
 

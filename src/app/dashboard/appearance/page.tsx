@@ -108,6 +108,14 @@ export default function AppearancePage() {
   const [avatarShape, setAvatarShape] = useState<AvatarShape>("circle");
   const [avatarBorder, setAvatarBorder] = useState<AvatarBorder>("none");
 
+  // NSFW
+  const [nsfw, setNsfw] = useState(false);
+
+  // Tip Jar
+  const [tipEnabled, setTipEnabled] = useState(false);
+  const [tipText, setTipText] = useState("");
+  const [tipUrl, setTipUrl] = useState("");
+
   // UI state
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -143,6 +151,10 @@ export default function AppearancePage() {
         setLayoutMode((data.layout as LayoutMode) || "centered");
         setAvatarShape((data.avatar_shape as AvatarShape) || "circle");
         setAvatarBorder((data.avatar_border as AvatarBorder) || "none");
+        setNsfw(Boolean(data.nsfw));
+        setTipEnabled(Boolean(data.tip_enabled));
+        setTipText(data.tip_text || "");
+        setTipUrl(data.tip_url || "");
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -166,6 +178,7 @@ export default function AppearancePage() {
           btn_shape: btnShape, btn_color: btnColor, btn_text_color: btnTextColor, btn_hover: btnHover, btn_shadow: btnShadow,
           font_family: fontFamily, font_size: fontSize, text_color: textColor,
           layout: layoutMode, avatar_shape: avatarShape, avatar_border: avatarBorder,
+          nsfw, tip_enabled: tipEnabled, tip_text: tipText, tip_url: tipUrl,
         }),
       });
       setPreviewCss(sanitizeCustomCss(customCss));
@@ -211,6 +224,19 @@ export default function AppearancePage() {
         <div className="space-y-1.5">
           <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} />
           <p className="text-xs text-slate-500">Your link: linkself.com/{username}</p>
+        </div>
+        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+          <div>
+            <p className="text-sm font-medium text-slate-900 dark:text-white">18+ Content Warning</p>
+            <p className="text-xs text-slate-500">Visitors must confirm their age before viewing your page</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNsfw(!nsfw)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${nsfw ? "bg-red-500" : "bg-slate-300 dark:bg-slate-600"}`}
+          >
+            <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${nsfw ? "translate-x-5" : "translate-x-0"}`} />
+          </button>
         </div>
       </Section>
 
@@ -307,13 +333,37 @@ export default function AppearancePage() {
         </div>
       </Section>
 
+      {/* Tip Jar */}
+      <Section title="Tip Jar / Donations">
+        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+          <div>
+            <p className="text-sm font-medium text-slate-900 dark:text-white">Enable Tip Button</p>
+            <p className="text-xs text-slate-500">Show a donation/tip button on your profile</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTipEnabled(!tipEnabled)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${tipEnabled ? "bg-amber-500" : "bg-slate-300 dark:bg-slate-600"}`}
+          >
+            <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${tipEnabled ? "translate-x-5" : "translate-x-0"}`} />
+          </button>
+        </div>
+        {tipEnabled && (
+          <div className="space-y-4">
+            <Input label="Button Text" value={tipText} onChange={(e) => setTipText(e.target.value)} placeholder="Buy me a coffee &#9749;" />
+            <Input label="Payment URL" value={tipUrl} onChange={(e) => setTipUrl(e.target.value)} placeholder="https://paypal.me/you or https://ko-fi.com/you or https://buymeacoffee.com/you" />
+            <p className="text-xs text-slate-500">Works with PayPal.me, Ko-fi, Buy Me a Coffee, Stripe payment links, Cash App, or any URL</p>
+          </div>
+        )}
+      </Section>
+
       {/* Custom CSS */}
       <Section title="Custom CSS (Pro)">
         <div className="space-y-1.5">
           <textarea value={customCss} onChange={(e) => setCustomCss(e.target.value)} rows={10} maxLength={5000} spellCheck={false} className="block w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-3 font-mono text-xs leading-5 text-emerald-100 placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30 focus:outline-none" placeholder={".profile-page {\n  border-radius: 24px;\n}\n.link-button {\n  text-transform: uppercase;\n}"} />
           <div className="flex items-center justify-between text-xs text-slate-500">
             <span>{customCss.length}/5000</span>
-            <Button type="button" variant="secondary" size="sm" onClick={() => setPreviewCss(sanitizeCustomCss(customCss))}>Preview CSS</Button>
+            <Button type="button" variant="secondary" onClick={() => setPreviewCss(sanitizeCustomCss(customCss))}>Preview CSS</Button>
           </div>
         </div>
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">

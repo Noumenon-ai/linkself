@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     return jsonError(parsed.error.issues[0]?.message ?? "Validation failed");
   }
 
-  const { title, url, icon, thumbnail_url, bg_color, text_color, shape } = parsed.data;
+  const { title, url, icon, thumbnail_url, bg_color, text_color, shape, nsfw } = parsed.data;
 
   // Get next position
   const last = queryOne<{ maxPos: number | null }>("SELECT MAX(position) as maxPos FROM links WHERE user_id = ?", session.userId);
@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
 
   const now = nowIso();
   const result = execute(
-    "INSERT INTO links (user_id, title, url, icon, thumbnail_url, position, clicks, is_active, bg_color, text_color, shape, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, 1, ?, ?, ?, ?)",
-    session.userId, title, url, icon ?? "", thumbnail_url ?? null, position, bg_color ?? "", text_color ?? "", shape ?? "", now
+    "INSERT INTO links (user_id, title, url, icon, thumbnail_url, position, clicks, is_active, bg_color, text_color, shape, nsfw, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, 1, ?, ?, ?, ?, ?)",
+    session.userId, title, url, icon ?? "", thumbnail_url ?? null, position, bg_color ?? "", text_color ?? "", shape ?? "", nsfw ? 1 : 0, now
   );
 
   const link = queryOne<LinkRow>("SELECT * FROM links WHERE id = ?", Number(result.lastInsertRowid));

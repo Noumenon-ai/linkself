@@ -47,6 +47,7 @@ export const linkCreateSchema = z.object({
   bg_color: z.string().trim().max(7).refine((v) => v === "" || HEX_COLOR_REGEX.test(v), "Invalid color").optional().default(""),
   text_color: z.string().trim().max(7).refine((v) => v === "" || HEX_COLOR_REGEX.test(v), "Invalid color").optional().default(""),
   shape: z.enum(["", "rounded", "pill", "square", "outline"]).optional().default(""),
+  nsfw: z.boolean().optional().default(false),
 });
 
 export const linkUpdateSchema = z.object({
@@ -59,6 +60,7 @@ export const linkUpdateSchema = z.object({
   bg_color: z.string().trim().max(7).refine((v) => v === "" || HEX_COLOR_REGEX.test(v), "Invalid color").optional(),
   text_color: z.string().trim().max(7).refine((v) => v === "" || HEX_COLOR_REGEX.test(v), "Invalid color").optional(),
   shape: z.enum(["", "rounded", "pill", "square", "outline"]).optional(),
+  nsfw: z.boolean().optional(),
 });
 
 export const linkReorderSchema = z.object({
@@ -111,6 +113,12 @@ export const settingsSchema = z.object({
   layout: z.enum(["centered", "left", "card"]).optional(),
   avatar_shape: z.enum(["circle", "square", "rounded-square", "none"]).optional(),
   avatar_border: z.enum(["none", "thin", "ring", "glow"]).optional(),
+  // NSFW
+  nsfw: z.boolean().optional(),
+  // Tip jar
+  tip_enabled: z.boolean().optional(),
+  tip_text: z.string().trim().max(100).optional(),
+  tip_url: z.string().trim().max(2000).refine((v) => v === "" || isHttpUrl(v), "Must be a valid URL").optional(),
   // Username change
   username: z.string().trim().min(3).max(30).regex(/^[a-z0-9-]+$/, "Only lowercase letters, numbers, and hyphens").refine((v) => !RESERVED_USERNAMES.includes(v), "Reserved").optional(),
 });

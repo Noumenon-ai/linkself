@@ -13,6 +13,7 @@ const SETTINGS_FIELDS = [
   "btn_shape", "btn_color", "btn_text_color", "btn_hover", "btn_shadow",
   "font_family", "font_size", "text_color",
   "layout", "avatar_shape", "avatar_border",
+  "nsfw", "tip_enabled", "tip_text", "tip_url",
   "plan",
 ] as const;
 
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   const result: Record<string, unknown> = {};
   for (const field of SETTINGS_FIELDS) {
-    result[field] = (user as Record<string, unknown>)[field] ?? "";
+    result[field] = (user as unknown as Record<string, unknown>)[field] ?? "";
   }
 
   return jsonOk(result);
@@ -41,6 +42,7 @@ const UPDATABLE_FIELDS = [
   "btn_shape", "btn_color", "btn_text_color", "btn_hover", "btn_shadow",
   "font_family", "font_size", "text_color",
   "layout", "avatar_shape", "avatar_border",
+  "nsfw", "tip_enabled", "tip_text", "tip_url",
   "username",
 ] as const;
 
@@ -80,13 +82,16 @@ export async function PATCH(request: NextRequest) {
     if (!themes[updates.theme]) return jsonError("Invalid theme");
   }
 
+  // Boolean fields that need integer conversion for SQLite
+  const BOOLEAN_FIELDS = new Set(["nsfw", "tip_enabled"]);
+
   // Handle all other fields
   for (const field of UPDATABLE_FIELDS) {
     if (field === "username") continue; // Already handled above
     const val = (updates as Record<string, unknown>)[field];
     if (val !== undefined) {
       fields.push(`${field} = ?`);
-      values.push(val);
+      values.push(BOOLEAN_FIELDS.has(field) ? (val ? 1 : 0) : val);
     }
   }
 

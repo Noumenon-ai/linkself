@@ -41,6 +41,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (updates.bg_color !== undefined) { fields.push("bg_color = ?"); values.push(updates.bg_color); }
   if (updates.text_color !== undefined) { fields.push("text_color = ?"); values.push(updates.text_color); }
   if (updates.shape !== undefined) { fields.push("shape = ?"); values.push(updates.shape); }
+  if (updates.nsfw !== undefined) { fields.push("nsfw = ?"); values.push(updates.nsfw ? 1 : 0); }
 
   if (fields.length > 0) {
     values.push(linkId);

@@ -27,24 +27,25 @@ const USER_COLUMN_MIGRATIONS: Array<{ name: string; definition: string }> = [
   { name: "layout", definition: "layout TEXT NOT NULL DEFAULT 'centered'" },
   { name: "avatar_shape", definition: "avatar_shape TEXT NOT NULL DEFAULT 'circle'" },
   { name: "avatar_border", definition: "avatar_border TEXT NOT NULL DEFAULT 'none'" },
+  { name: "nsfw", definition: "nsfw INTEGER NOT NULL DEFAULT 0" },
+  { name: "tip_enabled", definition: "tip_enabled INTEGER NOT NULL DEFAULT 0" },
+  { name: "tip_text", definition: "tip_text TEXT DEFAULT 'Buy me a coffee ☕'" },
+  { name: "tip_url", definition: "tip_url TEXT DEFAULT ''" },
 ];
 
 const LINK_COLUMN_MIGRATIONS: Array<{ name: string; definition: string }> = [
   { name: "bg_color", definition: "bg_color TEXT DEFAULT ''" },
   { name: "text_color", definition: "text_color TEXT DEFAULT ''" },
   { name: "shape", definition: "shape TEXT DEFAULT ''" },
+  { name: "nsfw", definition: "nsfw INTEGER NOT NULL DEFAULT 0" },
 ];
 
 // ===== TURSO (libSQL) adapter =====
 
-interface TursoClient {
-  execute(opts: { sql: string; args?: unknown[] }): Promise<{ rows: Record<string, unknown>[]; lastInsertRowid?: bigint | number }>;
-  batch(stmts: Array<{ sql: string; args?: unknown[] }>): Promise<unknown>;
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let tursoClient: any = null;
 
-let tursoClient: TursoClient | null = null;
-
-async function getTurso(): Promise<TursoClient> {
+async function getTurso() {
   if (tursoClient) return tursoClient;
   const { createClient } = await import("@libsql/client");
   tursoClient = createClient({ url: TURSO_URL!, authToken: TURSO_TOKEN });
@@ -57,7 +58,7 @@ async function getTurso(): Promise<TursoClient> {
     { table: "links", migrations: LINK_COLUMN_MIGRATIONS },
   ]) {
     const res = await tursoClient.execute({ sql: `PRAGMA table_info(${table})` });
-    const existing = new Set(res.rows.map((r) => r.name as string));
+    const existing = new Set((res.rows as Record<string, unknown>[]).map((r) => r.name as string));
     for (const col of migrations) {
       if (!existing.has(col.name)) {
         try { await tursoClient.execute({ sql: `ALTER TABLE ${table} ADD COLUMN ${col.definition}` }); } catch { /* column may exist */ }
@@ -140,21 +141,21 @@ export function execute(sql: string, ...params: unknown[]): { lastInsertRowid: n
 export async function queryOneAsync<T>(sql: string, ...params: unknown[]): Promise<T | undefined> {
   if (!USE_TURSO) return queryOne<T>(sql, ...params);
   const client = await getTurso();
-  const result = await client.execute({ sql, args: params });
+  const result = await client.execute({ sql, args: params as never[] });
   return (result.rows[0] as T) ?? undefined;
 }
 
 export async function queryAllAsync<T>(sql: string, ...params: unknown[]): Promise<T[]> {
   if (!USE_TURSO) return queryAll<T>(sql, ...params);
   const client = await getTurso();
-  const result = await client.execute({ sql, args: params });
+  const result = await client.execute({ sql, args: params as never[] });
   return result.rows as T[];
 }
 
 export async function executeAsync(sql: string, ...params: unknown[]): Promise<{ lastInsertRowid: number | bigint }> {
   if (!USE_TURSO) return execute(sql, ...params);
   const client = await getTurso();
-  const result = await client.execute({ sql, args: params });
+  const result = await client.execute({ sql, args: params as never[] });
   return { lastInsertRowid: result.lastInsertRowid ?? 0 };
 }
 
